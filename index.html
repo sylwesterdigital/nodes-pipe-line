@@ -2,40 +2,75 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Node Editor — drag, context menu, connect</title>
+  <title>Node Editor — projects, persistence, history (IndexedDB)</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; height: 100vh; display: flex; background:#13141a; color:#e5e7eb; user-select:none; }
-    #sidebar { width: 280px; padding:16px; border-right:1px solid #2e2f3a; background:#1b1c25; display:flex; flex-direction:column; gap:12px; }
+    :root {
+      --bg:#13141a; --panel:#1b1c25; --muted:#242633; --muted-2:#343647; --text:#e5e7eb; --acc:#3b82f6; --acc-2:#93c5fd;
+      --pill:#0f172a; --pill-b:#334155; --shadow:rgba(0,0,0,.4);
+    }
+    body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; height: 100vh; display: flex; background:var(--bg); color:var(--text); user-select:none; }
+    #sidebar { width: 280px; padding:16px; border-right:1px solid #2e2f3a; background:var(--panel); display:flex; flex-direction:column; gap:12px; }
     #sidebar h1 { font-size:18px; }
-    #sidebar .hint { font-size:12px; line-height:1.5; padding:10px; border-radius:10px; background:#242633; border:1px solid #343647; }
+    #sidebar .hint { font-size:12px; line-height:1.5; padding:10px; border-radius:10px; background:var(--muted); border:1px solid var(--muted-2); }
     #canvas-wrapper { flex:1; position:relative; overflow:hidden; }
     #canvas { width:100%; height:100%; background: radial-gradient(circle at top left, #25273a 0, #151623 55%); }
     .node { cursor: grab; transition: transform 120ms ease; transform-box: fill-box; transform-origin: center; }
     .node:active { cursor: grabbing; }
     .node:hover { transform: scale(1.06); }
-    .node circle { fill:#3b82f6; stroke:#93c5fd; stroke-width:2; }
-    .node text { fill:#e5e7eb; font-size:11px; pointer-events:none; }
-    .link { stroke:#e5e7eb; stroke-width:2; stroke-linecap:round; }
+    .node circle { fill:var(--acc); stroke:var(--acc-2); stroke-width:2; }
+    .node text { fill:var(--text); font-size:11px; pointer-events:none; }
+    .link { stroke:var(--text); stroke-width:2; stroke-linecap:round; }
     .link-shadow { stroke:rgba(0,0,0,0.6); stroke-width:4; stroke-linecap:round; }
     #temp-link { stroke:#fbbf24; stroke-width:2; stroke-dasharray:4 3; stroke-linecap:round; pointer-events:none; display:none; }
     #status { position:absolute; left:12px; bottom:12px; padding:6px 10px; border-radius:999px; background:rgba(15,23,42,0.88); border:1px solid rgba(148,163,184,0.5); font-size:11px; }
-    #menu { position:absolute; min-width:180px; background:#0f172a; border:1px solid #334155; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.4); padding:6px; display:none; z-index:10; }
-    #menu button { width:100%; text-align:left; padding:8px 10px; background:transparent; color:#e5e7eb; border:none; border-radius:8px; font-size:13px; }
+    #menu { position:absolute; min-width:180px; background:#0f172a; border:1px solid #334155; border-radius:10px; box-shadow:0 10px 30px var(--shadow); padding:6px; display:none; z-index:20; }
+    #menu button { width:100%; text-align:left; padding:8px 10px; background:transparent; color:var(--text); border:none; border-radius:8px; font-size:13px; }
     #menu button:hover { background:#1f2937; }
     #menu .danger:hover { background:#3b1f27; color:#fecaca; }
     #menu hr { border:0; border-top:1px solid #334155; margin:6px 0; }
+
+    /* Project gate */
+    #project-gate {
+      position: absolute; inset: 0; background: rgba(0,0,0,.6);
+      display: none; align-items: center; justify-content: center; z-index: 30;
+    }
+    #project-card {
+      width: min(520px, 92vw); background: var(--panel); border:1px solid var(--muted-2);
+      border-radius: 14px; box-shadow: 0 20px 60px var(--shadow); padding: 16px; display:flex; flex-direction:column; gap:10px;
+    }
+    #project-card h2 { font-size:18px; }
+    #projects-list { max-height: 200px; overflow:auto; border:1px solid var(--muted-2); border-radius:10px; padding:4px; }
+    .proj-row { display:flex; align-items:center; justify-content:space-between; padding:8px; border-radius:8px; }
+    .proj-row:hover { background: #222536; }
+    .proj-name { font-size:14px; }
+    .proj-meta { font-size:11px; opacity:.8; }
+    .row-actions { display:flex; gap:8px; }
+    .btn { appearance:none; border:1px solid var(--muted-2); background:var(--muted); color:var(--text); padding:6px 10px; border-radius:8px; font-size:12px; cursor:pointer; }
+    .btn:hover { filter: brightness(1.1); }
+    .btn.primary { background:#1f2a44; border-color:#2a3a5f; }
+    .btn.danger { background:#3b1f27; border-color:#5b2531; color:#fecaca; }
+    #project-form { display:flex; gap:8px; }
+    #project-name { flex:1; padding:8px 10px; border-radius:8px; border:1px solid var(--muted-2); background:#0f1222; color:var(--text); }
+    #topbar {
+      position:absolute; right:12px; top:12px; z-index:15; display:flex; gap:8px;
+      background: var(--pill); border:1px solid var(--pill-b); padding:6px 8px; border-radius:999px; font-size:12px;
+    }
+    #topbar .label { opacity:.9; }
+    #topbar .kbd { opacity:.8; border:1px solid var(--pill-b); padding:2px 6px; border-radius:6px; background:#0b1328; }
+    #topbar .sep { opacity:.4; }
+    .disabled-cover { position:absolute; inset:0; pointer-events:auto; }
   </style>
 </head>
 <body>
   <aside id="sidebar">
     <h1>Node Canvas</h1>
     <div class="hint">
-      • Click empty space to add a node.<br>
+      • Projects are required. Create or open a project to enable the canvas.<br>
       • Left-drag a node to move it (links follow).<br>
-      • Right-click / two-finger tap / long-press a node for actions:<br>
-      &nbsp;&nbsp;&nbsp;Start connection · Rename · Duplicate · Delete.<br>
-      • After “Start connection”, move the cursor (yellow line follows), click another node to connect, or press Esc/click empty space to cancel.
+      • Right-click / two-finger tap / long-press a node for actions.<br>
+      • “Start connection” → move (yellow guide) → click target node to connect.<br>
+      • Undo/Redo: <strong>Ctrl/⌘+Z</strong> / <strong>Ctrl/⌘+Y</strong>.
     </div>
   </aside>
 
@@ -54,7 +89,31 @@
       <button class="danger" data-action="delete">Delete</button>
     </div>
 
-    <div id="status">Mode: click to add a node</div>
+    <div id="topbar">
+      <span class="label">Project:</span>
+      <span id="proj-label" class="kbd">—</span>
+      <span class="sep">|</span>
+      <button id="btn-switch" class="btn">Switch</button>
+      <button id="btn-undo" class="btn">Undo</button>
+      <button id="btn-redo" class="btn">Redo</button>
+      <span class="sep">|</span>
+      <button id="btn-save" class="btn primary">Save</button>
+    </div>
+
+    <div id="status">Mode: create/open a project</div>
+
+    <div id="project-gate">
+      <div id="project-card">
+        <h2>Projects</h2>
+        <div id="projects-list"></div>
+        <div id="project-form">
+          <input id="project-name" placeholder="New project name" />
+          <button id="create-project" class="btn primary">Create</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="gate-cover" class="disabled-cover" style="display:none;"></div>
   </div>
 
   <script>
@@ -68,7 +127,18 @@
       const menu = document.getElementById("menu");
       const wrapper = document.getElementById("canvas-wrapper");
 
-      // ---- State ----
+      const gate = document.getElementById("project-gate");
+      const listEl = document.getElementById("projects-list");
+      const projNameInput = document.getElementById("project-name");
+      const createBtn = document.getElementById("create-project");
+      const projLabel = document.getElementById("proj-label");
+      const btnSwitch = document.getElementById("btn-switch");
+      const btnUndo = document.getElementById("btn-undo");
+      const btnRedo = document.getElementById("btn-redo");
+      const btnSave = document.getElementById("btn-save");
+      const gateCover = document.getElementById("gate-cover");
+
+      // ---- State (graph) ----
       let nodes = [];     // {id, x, y, label}
       let links = [];     // {from, to}
       let nextId = 1;
@@ -77,37 +147,339 @@
       let dragOffset = {x:0, y:0};
       let suppressClick = false;
 
-      let linkingFrom = null;   // node object when in connection mode
-      let menuNode = null;      // node object for context menu
+      let linkingFrom = null;
+      let menuNode = null;
 
       let pressTimer = null;
       const LONG_PRESS_MS = 500;
+      const DRAG_MENU_CANCEL_PX = 6;
+      let downX = 0, downY = 0;
 
-      // ---- Utils ----
+      // ---- State (projects / history) ----
+      let db = null;
+      const DB_NAME = "node-editor";
+      const DB_VER = 1;
+      let currentProject = null; // {id, name, createdAt, pointer}
+      let undoStack = []; // array of {nodes, links, nextId}
+      let redoStack = []; // same shape
+
+      // ---- Logging/Status ----
       function log(...a){ console.log("[nodes]", ...a); }
       function setStatus(text){ status.textContent = text; log(text); }
+
+      // ---- Geometry ----
       function svgPoint(evt) {
         const pt = svg.createSVGPoint();
         pt.x = evt.clientX; pt.y = evt.clientY;
         return pt.matrixTransform(svg.getScreenCTM().inverse());
       }
+      function dist(ax,ay,bx,by){ const dx=ax-bx, dy=ay-by; return Math.hypot(dx,dy); }
 
-      // ---- CRUD ----
-      function addNode(x, y) {
+      // ---- IndexedDB bootstrap ----
+      function openDB(){
+        return new Promise((resolve, reject)=>{
+          const req = indexedDB.open(DB_NAME, DB_VER);
+          req.onupgradeneeded = (e)=>{
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains("projects")) {
+              const s = db.createObjectStore("projects", { keyPath: "id", autoIncrement: true });
+              s.createIndex("by_name","name",{ unique: true });
+            }
+            if (!db.objectStoreNames.contains("states")) {
+              const s2 = db.createObjectStore("states", { keyPath: ["projectId","rev"] });
+              s2.createIndex("by_project","projectId");
+            }
+            if (!db.objectStoreNames.contains("history")) {
+              const s3 = db.createObjectStore("history", { keyPath: ["projectId","seq"] });
+              s3.createIndex("by_project","projectId");
+            }
+          };
+          req.onsuccess = ()=> resolve(req.result);
+          req.onerror = ()=> reject(req.error);
+        });
+      }
+
+      function tx(storeNames, mode="readonly"){ return db.transaction(storeNames, mode); }
+
+      // ---- Projects ----
+      async function listProjects(){
+        const out = [];
+        await new Promise((res,rej)=>{
+          const t = tx(["projects"]);
+          const req = t.objectStore("projects").openCursor();
+          req.onsuccess = (e)=>{
+            const cur = e.target.result;
+            if (cur){ out.push(cur.value); cur.continue(); } else { res(); }
+          };
+          req.onerror = ()=>rej(req.error);
+        });
+        return out.sort((a,b)=> (b.updatedAt||b.createdAt||0) - (a.updatedAt||a.createdAt||0));
+      }
+
+      async function createProject(name){
+        const now = Date.now();
+        const t = tx(["projects"],"readwrite");
+        const req = t.objectStore("projects").add({ name, createdAt: now, updatedAt: now, pointer: 0 });
+        const id = await new Promise((res,rej)=>{ req.onsuccess=()=>res(req.result); req.onerror=()=>rej(req.error); });
+        // initial empty state rev 0
+        await saveStateSnapshot(id, 0, { nodes:[], links:[], nextId:1 });
+        await saveHistoryRecord(id, 1, { type:"INIT", at: now });
+        return { id, name, createdAt: now, updatedAt: now, pointer: 0 };
+      }
+
+      async function updateProjectMeta(patch){
+        if (!currentProject) return;
+        const now = Date.now();
+        const t = tx(["projects"],"readwrite");
+        const obj = { ...currentProject, ...patch, updatedAt: now };
+        await new Promise((res,rej)=>{
+          const r = t.objectStore("projects").put(obj);
+          r.onsuccess=()=>res(); r.onerror=()=>rej(r.error);
+        });
+        currentProject = obj;
+        projLabel.textContent = currentProject.name;
+      }
+
+      // ---- State snapshots / history ----
+      async function saveStateSnapshot(projectId, rev, state){
+        const t = tx(["states"],"readwrite");
+        await new Promise((res,rej)=>{
+          const r = t.objectStore("states").put({ projectId, rev, state });
+          r.onsuccess=()=>res(); r.onerror=()=>rej(r.error);
+        });
+      }
+
+      async function loadLatestState(projectId){
+        // find max rev for project
+        let maxRev = -1, latest = null;
+        await new Promise((res,rej)=>{
+          const t = tx(["states"]);
+          const idx = t.objectStore("states").index("by_project");
+          const r = idx.openCursor(IDBKeyRange.only(projectId));
+          r.onsuccess = (e)=>{
+            const cur = e.target.result;
+            if (cur){ const { rev, state } = cur.value; if (rev > maxRev){ maxRev = rev; latest = { rev, state }; } cur.continue(); }
+            else res();
+          };
+          r.onerror=()=>rej(r.error);
+        });
+        return latest || { rev:0, state:{ nodes:[], links:[], nextId:1 } };
+      }
+
+      async function saveHistoryRecord(projectId, seq, action){
+        const t = tx(["history"],"readwrite");
+        await new Promise((res,rej)=>{
+          const r = t.objectStore("history").put({ projectId, seq, action });
+          r.onsuccess=()=>res(); r.onerror=()=>rej(r.error);
+        });
+      }
+
+      async function loadHistory(projectId){
+        const items=[];
+        await new Promise((res,rej)=>{
+          const t = tx(["history"]);
+          const idx = t.objectStore("history").index("by_project");
+          const r = idx.openCursor(IDBKeyRange.only(projectId));
+          r.onsuccess=(e)=>{
+            const cur = e.target.result;
+            if (cur){ items.push(cur.value); cur.continue(); } else res();
+          };
+          r.onerror=()=>rej(r.error);
+        });
+        items.sort((a,b)=>a.seq-b.seq);
+        return items;
+      }
+
+      // ---- Project UI ----
+      async function refreshProjectList(){
+        const items = await listProjects();
+        listEl.innerHTML = "";
+        if (items.length===0){
+          const d = document.createElement("div");
+          d.className="proj-row";
+          d.innerHTML = `<span class="proj-meta">No projects yet.</span>`;
+          listEl.appendChild(d);
+          return;
+        }
+        items.forEach(p=>{
+          const row = document.createElement("div");
+          row.className="proj-row";
+          row.innerHTML = `
+            <div>
+              <div class="proj-name">${p.name}</div>
+              <div class="proj-meta">Updated: ${new Date(p.updatedAt||p.createdAt).toLocaleString()}</div>
+            </div>
+            <div class="row-actions">
+              <button class="btn primary" data-open="${p.id}">Open</button>
+              <button class="btn danger" data-del="${p.id}">Delete</button>
+          </div>`;
+          listEl.appendChild(row);
+        });
+        listEl.querySelectorAll("[data-open]").forEach(b=> b.addEventListener("click", async (e)=>{
+          const id = Number(e.currentTarget.getAttribute("data-open"));
+          const all = await listProjects();
+          const match = all.find(x=>x.id===id);
+          if (!match) return;
+          await openProject(match);
+        }));
+        listEl.querySelectorAll("[data-del]").forEach(b=> b.addEventListener("click", async (e)=>{
+          const id = Number(e.currentTarget.getAttribute("data-del"));
+          await deleteProject(id);
+          await refreshProjectList();
+        }));
+      }
+
+      async function deleteProject(id){
+        // hard delete project + states + history
+        await new Promise((res,rej)=>{
+          const t = tx(["projects","states","history"],"readwrite");
+          t.objectStore("projects").delete(id);
+          // delete states
+          const s = t.objectStore("states").index("by_project").openCursor(IDBKeyRange.only(id));
+          s.onsuccess=(e)=>{ const c=e.target.result; if(c){ t.objectStore("states").delete([id,c.value.rev]); c.continue(); } };
+          // delete history
+          const h = t.objectStore("history").index("by_project").openCursor(IDBKeyRange.only(id));
+          h.onsuccess=(e)=>{ const c=e.target.result; if(c){ t.objectStore("history").delete([id,c.value.seq]); c.continue(); } };
+          t.oncomplete=()=>res(); t.onerror=()=>rej(t.error);
+        });
+        if (currentProject && currentProject.id===id){
+          currentProject=null; gateOn(); clearGraph(); setStatus("Project deleted");
+        }
+      }
+
+      async function openProject(pMeta){
+        currentProject = pMeta;
+        projLabel.textContent = currentProject.name;
+        const latest = await loadLatestState(currentProject.id);
+        applyState(latest.state);
+        await rebuildStacksFromHistory();
+        gateOff();
+        setStatus(`Project opened: ${currentProject.name} | Nodes: ${nodes.length} | Links: ${links.length}`);
+      }
+
+      function gateOn(){
+        gate.style.display = "flex";
+        gateCover.style.display = "block";
+      }
+      function gateOff(){
+        gate.style.display = "none";
+        gateCover.style.display = "none";
+      }
+
+      createBtn.addEventListener("click", async ()=>{
+        const name = (projNameInput.value||"").trim();
+        if (!name) return;
+        try {
+          const p = await createProject(name);
+          projNameInput.value = "";
+          await refreshProjectList();
+          await openProject(p);
+        } catch(e){ setStatus("Project create error"); }
+      });
+
+      btnSwitch.addEventListener("click", async ()=>{
+        await refreshProjectList();
+        gateOn();
+        setStatus("Switch project");
+      });
+      btnUndo.addEventListener("click", doUndo);
+      btnRedo.addEventListener("click", doRedo);
+      btnSave.addEventListener("click", persistSnapshot);
+
+      // ---- History helpers ----
+      function snapshot(){
+        return {
+          nodes: JSON.parse(JSON.stringify(nodes)),
+          links: JSON.parse(JSON.stringify(links)),
+          nextId
+        };
+      }
+      function applyState(state){
+        nodes = JSON.parse(JSON.stringify(state.nodes||[]));
+        links = JSON.parse(JSON.stringify(state.links||[]));
+        nextId = state.nextId || 1;
+        renderAll();
+      }
+      async function pushAction(action){
+        if (!currentProject) return;
+        undoStack.push( snapshot() );
+        redoStack.length = 0;
+        await appendHistory(action);
+        updateProjectMeta({}); // bump updatedAt
+      }
+      async function appendHistory(action){
+        const all = await loadHistory(currentProject.id);
+        const nextSeq = (all.length>0 ? all[all.length-1].seq+1 : 1);
+        await saveHistoryRecord(currentProject.id, nextSeq, action);
+      }
+      async function rebuildStacksFromHistory(){
+        undoStack.length = 0; redoStack.length = 0;
+        // base snapshot is latest state; first undo will go back to pre-last action state
+        undoStack.push( snapshot() );
+      }
+
+      async function doUndo(){
+        if (!currentProject) return;
+        if (undoStack.length<=1) return;
+        const currentSnap = undoStack.pop(); // current
+        redoStack.push(currentSnap);
+        const prevSnap = undoStack[undoStack.length-1];
+        applyState(prevSnap);
+        setStatus("Undo");
+        await persistSnapshot(); // persist after undo
+      }
+      async function doRedo(){
+        if (!currentProject) return;
+        if (redoStack.length===0) return;
+        const nextSnap = redoStack.pop();
+        undoStack.push( nextSnap );
+        applyState(nextSnap);
+        setStatus("Redo");
+        await persistSnapshot();
+      }
+
+      async function persistSnapshot(){
+        if (!currentProject) return;
+        const latest = await loadLatestState(currentProject.id);
+        const newRev = latest.rev + 1;
+        await saveStateSnapshot(currentProject.id, newRev, snapshot());
+        await updateProjectMeta({ pointer: newRev });
+        setStatus(`Saved rev ${newRev}`);
+      }
+
+      // ---- Graph CRUD (wrapped to push history) ----
+      function addNodeWrapped(x,y){
         const node = { id: nextId++, x, y, label: "N"+(nextId-1) };
         nodes.push(node);
-        renderNodes();
-        setStatus(`Nodes: ${nodes.length} | Links: ${links.length}`);
+        renderNodes(); renderLinks();
+        pushAction({ type:"ADD_NODE", at: Date.now(), node });
       }
-      function removeNode(node) {
+      function moveNodeWrapped(node){
+        renderLinks();
+        pushAction({ type:"MOVE_NODE", at: Date.now(), id: node.id, x: node.x, y: node.y });
+      }
+      function deleteNodeWrapped(node){
         nodes = nodes.filter(n => n.id !== node.id);
         links = links.filter(l => l.from !== node.id && l.to !== node.id);
         renderAll();
-        setStatus(`Deleted ${node.label}`);
+        pushAction({ type:"DELETE_NODE", at: Date.now(), id: node.id });
       }
-      function duplicateNode(node) {
-        addNode(node.x + 28, node.y + 28);
-        setStatus(`Duplicated ${node.label}`);
+      function duplicateNodeWrapped(node){
+        const n2 = { id: nextId++, x: node.x+28, y: node.y+28, label: "N"+(nextId-1) };
+        nodes.push(n2);
+        renderAll();
+        pushAction({ type:"DUPLICATE_NODE", at: Date.now(), from: node.id, to: n2.id });
+      }
+      function connectNodesWrapped(aId,bId){
+        links.push({ from:aId, to:bId });
+        renderLinks();
+        pushAction({ type:"CONNECT", at: Date.now(), from:aId, to:bId });
+      }
+      function renameNodeWrapped(node, newLabel){
+        const old = node.label;
+        node.label = newLabel;
+        updateNodeGraphics(node);
+        pushAction({ type:"RENAME_NODE", at: Date.now(), id: node.id, from: old, to: newLabel });
       }
 
       // ---- Rendering ----
@@ -141,6 +513,7 @@
           g.addEventListener("mouseup", cancelPressTimer);
           g.addEventListener("mouseleave", cancelPressTimer);
         });
+        setStatus(`Nodes: ${nodes.length} | Links: ${links.length}`);
       }
       function renderLinks() {
         linksLayer.innerHTML = "";
@@ -162,8 +535,9 @@
           linksLayer.appendChild(shadow);
           linksLayer.appendChild(line);
         });
+        setStatus(`Nodes: ${nodes.length} | Links: ${links.length}`);
       }
-      function renderAll(){ renderNodes(); renderLinks(); setStatus(`Nodes: ${nodes.length} | Links: ${links.length}`); }
+      function renderAll(){ renderNodes(); renderLinks(); }
       function updateNodeGraphics(node){
         const g = [...nodesLayer.querySelectorAll(".node")].find(el => Number(el.dataset.id) === node.id);
         if (!g) return;
@@ -177,7 +551,7 @@
 
       // ---- Context menu ----
       function openMenu(e, node){
-        if (linkingFrom) return; // no menu while linking
+        if (linkingFrom || dragNode) return;
         e.preventDefault();
         closeMenu();
         menuNode = node;
@@ -187,7 +561,6 @@
         menu.style.left = x + "px";
         menu.style.top  = y + "px";
         menu.style.display = "block";
-        log("menu open for", node.label);
       }
       function closeMenu(){ menu.style.display = "none"; menuNode = null; }
 
@@ -205,24 +578,29 @@
           tempLink.style.display = "block";
           svg.addEventListener("mousemove", onCanvasMouseMove);
           setStatus(`Connecting from ${linkingFrom.label}: move cursor, click another node to finish`);
-          log("connect-start", linkingFrom);
         }
         if (action === "rename") {
           const val = prompt("New name:", menuNode.label);
-          if (val && val.trim()) { menuNode.label = val.trim(); updateNodeGraphics(menuNode); setStatus(`Renamed to ${menuNode.label}`); }
+          if (val && val.trim()) { renameNodeWrapped(menuNode, val.trim()); }
         }
-        if (action === "duplicate") { duplicateNode(menuNode); }
-        if (action === "delete") { removeNode(menuNode); }
+        if (action === "duplicate") { duplicateNodeWrapped(menuNode); }
+        if (action === "delete") { deleteNodeWrapped(menuNode); }
         closeMenu();
       });
 
       wrapper.addEventListener("mousedown", (e)=>{ if (e.target === svg) closeMenu(); });
-      window.addEventListener("keydown", (e)=>{ if (e.key === "Escape") { closeMenu(); cancelLinking("esc"); } });
+      window.addEventListener("keydown", async (e)=>{
+        const mod = e.ctrlKey || e.metaKey;
+        if (mod && e.key.toLowerCase()==="z"){ e.preventDefault(); await doUndo(); }
+        if (mod && e.key.toLowerCase()==="y"){ e.preventDefault(); await doRedo(); }
+        if (e.key === "Escape") { closeMenu(); cancelLinking("esc"); }
+      });
 
       // ---- Long-press ----
       function startPressTimer(e, node){
-        if (e.button !== 0 || linkingFrom) return; // disabled while linking
+        if (e.button !== 0 || linkingFrom) return;
         cancelPressTimer();
+        downX = e.clientX; downY = e.clientY;
         pressTimer = setTimeout(()=>{ suppressClick = true; openMenu(e, node); }, LONG_PRESS_MS);
       }
       function cancelPressTimer(){ if (pressTimer){ clearTimeout(pressTimer); pressTimer=null; } }
@@ -231,22 +609,13 @@
 
       // ---- Drag & move ----
       function onNodeMouseDown(e, node){
-        // if linking, treat a click on a node as "complete connection"
+        if (!currentProject){ gateOn(); return; }
         if (linkingFrom){
           e.preventDefault();
-          const toId = node.id;
-          if (toId !== linkingFrom.id) {
-            links.push({ from: linkingFrom.id, to: toId });
-            renderLinks();
-            setStatus(`Linked ${linkingFrom.label} → ${node.label}`);
-            log("connect-end", { from: linkingFrom.id, to: toId });
-          } else {
-            setStatus("Link cancelled");
-          }
-          cancelLinking("completed-or-self");
+          if (node.id !== linkingFrom.id) { connectNodesWrapped(linkingFrom.id, node.id); }
+          cancelLinking("completed");
           return;
         }
-
         e.preventDefault();
         e.stopPropagation();
         if (suppressClick || e.button !== 0) return;
@@ -259,9 +628,11 @@
         svg.addEventListener("mousemove", onCanvasMouseMove);
         svg.addEventListener("mouseup", onCanvasMouseUp);
         setStatus(`Dragging ${node.label}`);
-        log("drag-start", node);
       }
+
       function onCanvasMouseMove(e){
+        if (pressTimer && dist(e.clientX,e.clientY,downX,downY) > DRAG_MENU_CANCEL_PX) cancelPressTimer();
+
         if (linkingFrom){
           const p = svgPoint(e);
           tempLink.setAttribute("x2", p.x);
@@ -275,33 +646,60 @@
         updateNodeGraphics(dragNode);
         renderLinks();
       }
+
       function onCanvasMouseUp(){
         svg.removeEventListener("mousemove", onCanvasMouseMove);
         svg.removeEventListener("mouseup", onCanvasMouseUp);
-        if (dragNode){ setStatus(`Node dropped. Nodes: ${nodes.length} | Links: ${links.length}`); log("drag-end", dragNode); dragNode = null; }
+        if (dragNode){ moveNodeWrapped(dragNode); dragNode = null; }
         suppressClick = false;
       }
 
-      // ---- Linking cancel via empty area ----
+      // ---- Complete connection on mouseup as well ----
+      nodesLayer.addEventListener("mouseup", (e)=>{
+        if (!linkingFrom) return;
+        const group = e.target.closest(".node");
+        if (!group) return;
+        const toId = Number(group.dataset.id);
+        if (toId !== linkingFrom.id) { connectNodesWrapped(linkingFrom.id, toId); }
+        cancelLinking("completed-mouseup");
+      });
+
+      // ---- Canvas add-node / cancel linking ----
       svg.addEventListener("mousedown", (e)=>{
         if (e.button === 2) e.preventDefault();
         if (e.target !== svg) return;
+        if (!currentProject){ gateOn(); return; }
         if (linkingFrom){ cancelLinking("empty-click"); setStatus("Link cancelled"); return; }
         const p = svgPoint(e);
-        addNode(p.x, p.y);
+        addNodeWrapped(p.x, p.y);
       });
 
-      function cancelLinking(reason){
+      function cancelLinking(){
         if (!linkingFrom) return;
-        log("connect-cancel", reason || "unknown");
         linkingFrom = null;
         tempLink.style.display = "none";
         svg.removeEventListener("mousemove", onCanvasMouseMove);
       }
 
-      // ---- Other ----
+      // ---- Prevent context menu while dragging/linking ----
+      nodesLayer.addEventListener("contextmenu", (e)=>{
+        if (dragNode || linkingFrom){ e.preventDefault(); e.stopPropagation(); }
+      });
       svg.addEventListener("contextmenu", (e)=>e.preventDefault());
-      setStatus("Mode: click to add a node");
+
+      // ---- Boot ----
+      async function boot(){
+        db = await openDB();
+        await refreshProjectList();
+        gateOn();
+        clearGraph();
+      }
+      function clearGraph(){
+        nodes = []; links = []; nextId = 1; renderAll(); projLabel.textContent="—";
+      }
+
+      boot();
+      setStatus("Mode: create/open a project");
     })();
   </script>
 </body>
