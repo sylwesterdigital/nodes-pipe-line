@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Node Editor — drag, context menu, connect</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; height: 100vh; display: flex; background:#13141a; color:#e5e7eb; user-select:none; }
+    #sidebar { width: 280px; padding:16px; border-right:1px solid #2e2f3a; background:#1b1c25; display:flex; flex-direction:column; gap:12px; }
+    #sidebar h1 { font-size:18px; }
+    #sidebar .hint { font-size:12px; line-height:1.5; padding:10px; border-radius:10px; background:#242633; border:1px solid #343647; }
+    #canvas-wrapper { flex:1; position:relative; overflow:hidden; }
+    #canvas { width:100%; height:100%; background: radial-gradient(circle at top left, #25273a 0, #151623 55%); }
+    .node { cursor: grab; transition: transform 120ms ease; transform-box: fill-box; transform-origin: center; }
+    .node:active { cursor: grabbing; }
+    .node:hover { transform: scale(1.06); }
+    .node circle { fill:#3b82f6; stroke:#93c5fd; stroke-width:2; }
+    .node text { fill:#e5e7eb; font-size:11px; pointer-events:none; }
+    .link { stroke:#e5e7eb; stroke-width:2; stroke-linecap:round; }
+    .link-shadow { stroke:rgba(0,0,0,0.6); stroke-width:4; stroke-linecap:round; }
+    #temp-link { stroke:#fbbf24; stroke-width:2; stroke-dasharray:4 3; stroke-linecap:round; pointer-events:none; display:none; }
+    #status { position:absolute; left:12px; bottom:12px; padding:6px 10px; border-radius:999px; background:rgba(15,23,42,0.88); border:1px solid rgba(148,163,184,0.5); font-size:11px; }
+    #menu { position:absolute; min-width:180px; background:#0f172a; border:1px solid #334155; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,.4); padding:6px; display:none; z-index:10; }
+    #menu button { width:100%; text-align:left; padding:8px 10px; background:transparent; color:#e5e7eb; border:none; border-radius:8px; font-size:13px; }
+    #menu button:hover { background:#1f2937; }
+    #menu .danger:hover { background:#3b1f27; color:#fecaca; }
+    #menu hr { border:0; border-top:1px solid #334155; margin:6px 0; }
+  </style>
+</head>
+<body>
+  <aside id="sidebar">
+    <h1>Node Canvas</h1>
+    <div class="hint">
+      • Click empty space to add a node.<br>
+      • Left-drag a node to move it (links follow).<br>
+      • Right-click / two-finger tap / long-press a node for actions:<br>
+      &nbsp;&nbsp;&nbsp;Start connection · Rename · Duplicate · Delete.<br>
+      • After “Start connection”, move the cursor (yellow line follows), click another node to connect, or press Esc/click empty space to cancel.
+    </div>
+  </aside>
+
+  <div id="canvas-wrapper">
+    <svg id="canvas">
+      <g id="links-layer"></g>
+      <line id="temp-link" x1="0" y1="0" x2="0" y2="0"></line>
+      <g id="nodes-layer"></g>
+    </svg>
+
+    <div id="menu">
+      <button data-action="connect">Start connection</button>
+      <button data-action="rename">Rename…</button>
+      <button data-action="duplicate">Duplicate</button>
+      <hr>
+      <button class="danger" data-action="delete">Delete</button>
+    </div>
+
+    <div id="status">Mode: click to add a node</div>
+  </div>
+
+  <script>
+    (function () {
+      // ---- Core refs ----
+      const svg = document.getElementById("canvas");
+      const nodesLayer = document.getElementById("nodes-layer");
+      const linksLayer = document.getElementById("links-layer");
+      const tempLink = document.getElementById("temp-link");
+      const status = document.getElementById("status");
+      const menu = document.getElementById("menu");
+      const wrapper = document.getElementById("canvas-wrapper");
+
+      // ---- State ----
+      let nodes = [];     // {id, x, y, label}
+      let links = [];     // {from, to}
+      let nextId = 1;
+
+      let dragNode = null;
+      let dragOffset = {x:0, y:0};
+      let suppressClick = false;
+
+      let linkingFrom = null;   // node object when in connection mode
+      let menuNode = null;      // node object for context menu
+
+      let pressTimer = null;
+      const LONG_PRESS_MS = 500;
+
+      // ---- Utils ----
+      function log(...a){ console.log("[nodes]", ...a); }
+      function setStatus(text){ status.textContent = text; log(text); }
+      function svgPoint(evt) {
+        const pt = svg.createSVGPoint();
+        pt.x = evt.clientX; pt.y = evt.clientY;
+        return pt.matrixTransform(svg.getScreenCTM().inverse());
+      }
+
+      // ---- CRUD ----
+      function addNode(x, y) {
+        const node = { id: nextId++, x, y, label: "N"+(nextId-1) };
+        nodes.push(node);
+        renderNodes();
+        setStatus(`Nodes: ${nodes.length} | Links: ${links.length}`);
+      }
+      function removeNode(node) {
+        nodes = nodes.filter(n => n.id !== node.id);
+        links = links.filter(l => l.from !== node.id && l.to !== node.id);
+        renderAll();
+        setStatus(`Deleted ${node.label}`);
+      }
+      function duplicateNode(node) {
+        addNode(node.x + 28, node.y + 28);
+        setStatus(`Duplicated ${node.label}`);
+      }
+
+      // ---- Rendering ----
+      function renderNodes() {
+        nodesLayer.innerHTML = "";
+        nodes.forEach(node => {
+          const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+          g.classList.add("node");
+          g.dataset.id = String(node.id);
+
+          const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+          circle.setAttribute("cx", node.x);
+          circle.setAttribute("cy", node.y);
+          circle.setAttribute("r", 18);
+
+          const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          text.setAttribute("x", node.x);
+          text.setAttribute("y", node.y + 4);
+          text.setAttribute("text-anchor", "middle");
+          text.textContent = node.label;
+
+          g.appendChild(circle);
+          g.appendChild(text);
+          nodesLayer.appendChild(g);
+
+          g.addEventListener("mousedown", (e)=>onNodeMouseDown(e, node));
+          g.addEventListener("mouseup", onNodeMouseUp);
+          g.addEventListener("mouseleave", onNodeMouseLeave);
+          g.addEventListener("contextmenu", (e)=>openMenu(e, node));
+          g.addEventListener("mousedown", (e)=>startPressTimer(e, node));
+          g.addEventListener("mouseup", cancelPressTimer);
+          g.addEventListener("mouseleave", cancelPressTimer);
+        });
+      }
+      function renderLinks() {
+        linksLayer.innerHTML = "";
+        links.forEach(link => {
+          const from = nodes.find(n => n.id === link.from);
+          const to   = nodes.find(n => n.id === link.to);
+          if (!from || !to) return;
+
+          const shadow = document.createElementNS("http://www.w3.org/2000/svg", "line");
+          shadow.classList.add("link-shadow");
+          shadow.setAttribute("x1", from.x); shadow.setAttribute("y1", from.y);
+          shadow.setAttribute("x2", to.x);   shadow.setAttribute("y2", to.y);
+
+          const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+          line.classList.add("link");
+          line.setAttribute("x1", from.x); line.setAttribute("y1", from.y);
+          line.setAttribute("x2", to.x);   line.setAttribute("y2", to.y);
+
+          linksLayer.appendChild(shadow);
+          linksLayer.appendChild(line);
+        });
+      }
+      function renderAll(){ renderNodes(); renderLinks(); setStatus(`Nodes: ${nodes.length} | Links: ${links.length}`); }
+      function updateNodeGraphics(node){
+        const g = [...nodesLayer.querySelectorAll(".node")].find(el => Number(el.dataset.id) === node.id);
+        if (!g) return;
+        g.querySelector("circle").setAttribute("cx", node.x);
+        g.querySelector("circle").setAttribute("cy", node.y);
+        const t = g.querySelector("text");
+        t.setAttribute("x", node.x);
+        t.setAttribute("y", node.y + 4);
+        t.textContent = node.label;
+      }
+
+      // ---- Context menu ----
+      function openMenu(e, node){
+        if (linkingFrom) return; // no menu while linking
+        e.preventDefault();
+        closeMenu();
+        menuNode = node;
+        const rect = wrapper.getBoundingClientRect();
+        const x = Math.min(e.clientX - rect.left, rect.width - 200);
+        const y = Math.min(e.clientY - rect.top,  rect.height - 160);
+        menu.style.left = x + "px";
+        menu.style.top  = y + "px";
+        menu.style.display = "block";
+        log("menu open for", node.label);
+      }
+      function closeMenu(){ menu.style.display = "none"; menuNode = null; }
+
+      menu.addEventListener("click", (e)=>{
+        const btn = e.target.closest("button");
+        if (!btn || !menuNode) return;
+        const action = btn.dataset.action;
+
+        if (action === "connect") {
+          linkingFrom = menuNode;
+          tempLink.setAttribute("x1", linkingFrom.x);
+          tempLink.setAttribute("y1", linkingFrom.y);
+          tempLink.setAttribute("x2", linkingFrom.x);
+          tempLink.setAttribute("y2", linkingFrom.y);
+          tempLink.style.display = "block";
+          svg.addEventListener("mousemove", onCanvasMouseMove);
+          setStatus(`Connecting from ${linkingFrom.label}: move cursor, click another node to finish`);
+          log("connect-start", linkingFrom);
+        }
+        if (action === "rename") {
+          const val = prompt("New name:", menuNode.label);
+          if (val && val.trim()) { menuNode.label = val.trim(); updateNodeGraphics(menuNode); setStatus(`Renamed to ${menuNode.label}`); }
+        }
+        if (action === "duplicate") { duplicateNode(menuNode); }
+        if (action === "delete") { removeNode(menuNode); }
+        closeMenu();
+      });
+
+      wrapper.addEventListener("mousedown", (e)=>{ if (e.target === svg) closeMenu(); });
+      window.addEventListener("keydown", (e)=>{ if (e.key === "Escape") { closeMenu(); cancelLinking("esc"); } });
+
+      // ---- Long-press ----
+      function startPressTimer(e, node){
+        if (e.button !== 0 || linkingFrom) return; // disabled while linking
+        cancelPressTimer();
+        pressTimer = setTimeout(()=>{ suppressClick = true; openMenu(e, node); }, LONG_PRESS_MS);
+      }
+      function cancelPressTimer(){ if (pressTimer){ clearTimeout(pressTimer); pressTimer=null; } }
+      function onNodeMouseUp(){ cancelPressTimer(); }
+      function onNodeMouseLeave(){ cancelPressTimer(); }
+
+      // ---- Drag & move ----
+      function onNodeMouseDown(e, node){
+        // if linking, treat a click on a node as "complete connection"
+        if (linkingFrom){
+          e.preventDefault();
+          const toId = node.id;
+          if (toId !== linkingFrom.id) {
+            links.push({ from: linkingFrom.id, to: toId });
+            renderLinks();
+            setStatus(`Linked ${linkingFrom.label} → ${node.label}`);
+            log("connect-end", { from: linkingFrom.id, to: toId });
+          } else {
+            setStatus("Link cancelled");
+          }
+          cancelLinking("completed-or-self");
+          return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+        if (suppressClick || e.button !== 0) return;
+
+        const p = svgPoint(e);
+        dragNode = node;
+        dragOffset.x = node.x - p.x;
+        dragOffset.y = node.y - p.y;
+
+        svg.addEventListener("mousemove", onCanvasMouseMove);
+        svg.addEventListener("mouseup", onCanvasMouseUp);
+        setStatus(`Dragging ${node.label}`);
+        log("drag-start", node);
+      }
+      function onCanvasMouseMove(e){
+        if (linkingFrom){
+          const p = svgPoint(e);
+          tempLink.setAttribute("x2", p.x);
+          tempLink.setAttribute("y2", p.y);
+          return;
+        }
+        if (!dragNode) return;
+        const p = svgPoint(e);
+        dragNode.x = p.x + dragOffset.x;
+        dragNode.y = p.y + dragOffset.y;
+        updateNodeGraphics(dragNode);
+        renderLinks();
+      }
+      function onCanvasMouseUp(){
+        svg.removeEventListener("mousemove", onCanvasMouseMove);
+        svg.removeEventListener("mouseup", onCanvasMouseUp);
+        if (dragNode){ setStatus(`Node dropped. Nodes: ${nodes.length} | Links: ${links.length}`); log("drag-end", dragNode); dragNode = null; }
+        suppressClick = false;
+      }
+
+      // ---- Linking cancel via empty area ----
+      svg.addEventListener("mousedown", (e)=>{
+        if (e.button === 2) e.preventDefault();
+        if (e.target !== svg) return;
+        if (linkingFrom){ cancelLinking("empty-click"); setStatus("Link cancelled"); return; }
+        const p = svgPoint(e);
+        addNode(p.x, p.y);
+      });
+
+      function cancelLinking(reason){
+        if (!linkingFrom) return;
+        log("connect-cancel", reason || "unknown");
+        linkingFrom = null;
+        tempLink.style.display = "none";
+        svg.removeEventListener("mousemove", onCanvasMouseMove);
+      }
+
+      // ---- Other ----
+      svg.addEventListener("contextmenu", (e)=>e.preventDefault());
+      setStatus("Mode: click to add a node");
+    })();
+  </script>
+</body>
+</html>
