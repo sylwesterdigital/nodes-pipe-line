@@ -1,8 +1,10 @@
 # nodes-pipe-line
 A Simple Pipeline for Using a Custom Nodes Editor
 
-
 No build step, no external dependencies.
+
+<img width="1441" height="1123" alt="Screenshot 2025-11-18 at 21 08 44" src="https://github.com/user-attachments/assets/232a9572-4dbd-4e8b-9fc5-9c81626c04e4" />
+
 
 ---
 
