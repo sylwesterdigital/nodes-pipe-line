@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+
+
   <meta name="theme-color" content="#13141a">
   <link rel="manifest" href="data:application/manifest+json,{&quot;name&quot;:&quot;Node Canvas&quot;,&quot;display&quot;:&quot;standalone&quot;}">
   <title>Node Editor — projects, persistence, history (IndexedDB)</title>
@@ -24,6 +28,10 @@
       background:var(--bg); color:var(--text);
       height:100vh; display:flex;
     }
+
+    input, textarea {
+      font-size:16px;
+    }    
 
     /* Sidebar */
     #sidebar {
@@ -86,12 +94,24 @@
     .btn.danger  { background:#3b1f27; border-color:#5b2531; color:#fecaca; }
 
     #btn-help, #btn-switch, #btn-new { display:inline-flex; align-items:center; justify-content:center; min-width:44px; }
-    #btn-dup, #btn-del, #btn-undo, #btn-redo, #btn-save { display:none; }
+
+    /* Only hide dup/del by default */
+    #btn-dup,
+    #btn-del {
+      display:none;
+    }
 
     @media (min-width: 768px) {
-      #topbar .label, #topbar .kbd, #topbar .sep { display:inline; }
-      #btn-dup, #btn-del, #btn-undo, #btn-redo, #btn-save { display:inline-flex; }
+      #topbar .label,
+      #topbar .kbd,
+      #topbar .sep { display:inline; }
+
+      #btn-dup,
+      #btn-del {
+        display:inline-flex;
+      }
     }
+
 
     /* Palette */
     #palette {
@@ -104,14 +124,20 @@
     .swatch.picker span { pointer-events:none; }
 
     /* Invisible color-input overlay anchored to ＋ swatch */
+    /* keep color input off-screen, no hit area to zoom to */
     #palette-color-input {
       position:fixed;
-      width:32px; height:32px;
-      opacity:0.0001;
-      border:none; padding:0; margin:0;
+      left:-9999px;
+      top:auto;
+      width:1px;
+      height:1px;
+      opacity:0;
+      border:none;
+      padding:0;
+      margin:0;
       background:transparent;
-      z-index:16;
     }
+
 
     .disabled-cover { position:absolute; inset:0; pointer-events:auto; }
 
@@ -137,6 +163,20 @@
       background:#0f1222; color:#e5e7eb; font-size:16px;
     }
 
+    .project-card-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+    }
+
+    .project-close-btn{
+      min-width:auto;
+      padding:4px 10px;
+      line-height:1;
+      font-size:16px;
+    }
+
     /* --- Mobile UI additions (exact placement: appended at end of <style>) --- */
     #hamburger{position:absolute;right:12px;top:12px;z-index:40;background:var(--pill);border:1px solid var(--pill-b);border-radius:10px;width:44px;height:44px;display:grid;place-items:center}
     #hamburger span{font-size:20px;line-height:1}
@@ -144,13 +184,162 @@
     #hamburger-menu button{width:100%;padding:12px 14px;background:transparent;border:0;color:var(--text);text-align:left;font-size:16px}
     #hamburger-menu button:hover{background:#1f2937}
 
-    #mobile-undo-redo{position:absolute;left:12px;top:12px;z-index:40;display:flex;gap:8px;background:var(--pill);border:1px solid var(--pill-b);padding:6px;border-radius:999px}
-    @media(min-width:768px){#mobile-undo-redo,#hamburger,#hamburger-menu{display:none}}
 
-    #tool-rail{position:absolute;left:12px;top:68px;bottom:12px;width:56px;z-index:38;display:flex;flex-direction:column;gap:10px}
-    .tool{flex:0 0 auto;display:grid;place-items:center;height:44px;border-radius:10px;border:1px solid var(--muted-2);background:var(--muted);font-size:12px}
+
+    #mobile-undo-redo{
+      position:absolute;
+      right:12px;
+      bottom:72px;
+      z-index:40;
+      display:flex;
+      gap:8px;
+      background:var(--pill);
+      padding:6px;
+    }
+
+    @media(min-width:768px){
+      #hamburger,
+      #hamburger-menu{
+        display:none;
+      }
+    }
+
+    #tool-rail{
+      position:absolute;
+      left:12px;
+      top:68px;
+      bottom:12px;
+      width:56px;
+      z-index:38;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      pointer-events:none;
+    }
+
+    #tool-rail .tool{
+      pointer-events:auto; 
+    }
+
+    .tool{
+      flex:0 0 auto;
+      display:grid;
+      place-items:center;
+      height:44px;
+      border-radius:10px;
+      border:1px solid var(--muted-2);
+      background:var(--muted);
+      font-size:12px;
+      color:#ffffff;            
+    }
     .tool.active{outline:2px solid #fff;outline-offset:2px}
-    .tool .lbl{pointer-events:none;font-size:11px}
+    .tool .lbl{
+      pointer-events:none;
+      font-size:11px;
+      color:#ffffff;             
+    }
+
+
+    /* Node description overlay */
+    #desc-overlay{
+      position:absolute;
+      inset:0;
+      display:none;              /* flex when active */
+      align-items:center;
+      justify-content:center;
+      background:rgba(0,0,0,.65);
+      z-index:70;
+      padding:16px;
+    }
+
+    #desc-card{
+      width:min(640px, 96vw);
+      max-height:80vh;
+      background:var(--panel);
+      border:1px solid var(--muted-2);
+      border-radius:14px;
+      box-shadow:0 24px 80px var(--shadow);
+      padding:16px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      overflow:auto;
+    }
+
+    #desc-card h2{
+      font-size:18px;
+    }
+
+    #desc-node-label{
+      font-size:14px;
+      opacity:.8;
+    }
+
+    #desc-text{
+      width:100%;
+      min-height:120px;
+      max-height:40vh;
+      resize:vertical;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid var(--muted-2);
+      background:#020617;
+      color:var(--text);
+      font-size:16px;
+      line-height:1.4;
+    }
+
+    .desc-actions{
+      display:flex;
+      justify-content:flex-end;
+      gap:8px;
+      margin-top:4px;
+    }
+
+
+    /* Rename node overlay */
+    #rename-overlay{
+      position:absolute;
+      inset:0;
+      display:none;              /* flex when active */
+      align-items:center;
+      justify-content:center;
+      background:rgba(0,0,0,.65);
+      z-index:71;
+      padding:16px;
+    }
+
+    #rename-card{
+      width:min(480px, 90vw);
+      background:var(--panel);
+      border:1px solid var(--muted-2);
+      border-radius:14px;
+      box-shadow:0 24px 80px var(--shadow);
+      padding:16px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    #rename-card h2{
+      font-size:18px;
+    }
+
+    #rename-input{
+      width:100%;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid var(--muted-2);
+      background:#020617;
+      color:var(--text);
+      font-size:16px;
+    }
+
+    @media (max-width: 767px) {
+      #topbar { display:none; }
+    }
+
+
   </style>
 </head>
 <body>
@@ -165,6 +354,33 @@
     </div>
   </aside>
 
+
+  <!-- Node description overlay -->
+  <div id="desc-overlay">
+    <div id="desc-card">
+      <h2>Node description</h2>
+      <div id="desc-node-label"></div>
+      <textarea id="desc-text" placeholder="Describe this node…"></textarea>
+      <div class="desc-actions">
+        <button id="desc-cancel" class="btn">Cancel</button>
+        <button id="desc-save" class="btn primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rename node overlay -->
+  <div id="rename-overlay">
+    <div id="rename-card">
+      <h2>Rename node</h2>
+      <input id="rename-input" placeholder="Node title" />
+      <div class="desc-actions">
+        <button id="rename-cancel" class="btn">Cancel</button>
+        <button id="rename-save" class="btn primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+
   <div id="canvas-wrapper">
     <svg id="canvas">
       <g id="links-layer"></g>
@@ -175,10 +391,12 @@
     <div id="menu">
       <button data-action="connect">Start connection</button>
       <button data-action="rename">Rename…</button>
+      <button data-action="description">Description…</button> 
       <button data-action="duplicate">Duplicate</button>
       <hr>
       <button class="danger" data-action="delete">Delete</button>
     </div>
+
 
     <div id="topbar">
       <button id="btn-help" class="btn" title="Show help">?</button>
@@ -189,12 +407,9 @@
       <button id="btn-new" class="btn">New…</button>
       <button id="btn-dup" class="btn">Duplicate…</button>
       <button id="btn-del" class="btn danger">Delete</button>
-      <span class="sep">|</span>
-      <button id="btn-undo" class="btn">Undo</button>
-      <button id="btn-redo" class="btn">Redo</button>
-      <span class="sep">|</span>
-      <button id="btn-save" class="btn primary">Save</button>
     </div>
+
+
 
     <div id="palette"></div>
     <input id="palette-color-input" type="color" aria-label="Pick color" />
@@ -203,7 +418,10 @@
 
     <div id="project-gate" style="display:none;">
       <div id="project-card">
-        <h2>Projects</h2>
+        <div class="project-card-header">
+          <h2>Projects</h2>
+          <button id="project-close" class="btn project-close-btn" aria-label="Close projects">×</button>
+        </div>
         <div id="projects-list"></div>
         <div id="project-form">
           <input id="project-name" placeholder="New project name" />
@@ -212,22 +430,26 @@
       </div>
     </div>
 
+
     <div id="gate-cover" class="disabled-cover" style="display:none;"></div>
 
     <!-- Mobile controls (exact placement: appended at end of #canvas-wrapper) -->
     <button id="hamburger" aria-label="Menu"><span>☰</span></button>
     <div id="hamburger-menu" role="menu">
+      <button data-mobile="hint">Hint</button>
       <button data-mobile="open">Open</button>
       <button data-mobile="new">New</button>
       <button data-mobile="dup">Duplicate</button>
       <button data-mobile="del">Delete</button>
-      <button data-mobile="hint">Hint</button>
+      <button data-mobile="save">Save</button> 
     </div>
 
     <div id="mobile-undo-redo">
-      <button id="m-undo" class="btn" title="Undo">↶</button>
-      <button id="m-redo" class="btn" title="Redo">↷</button>
+      <button id="btn-undo" class="btn" title="Undo">Undo</button>
+      <button id="btn-redo" class="btn" title="Redo">Redo</button>
+      <button id="btn-save" class="btn primary" title="Save">Save</button>
     </div>
+
 
     <div id="tool-rail">
       <button id="tool-lines"  class="tool" title="Lines mode"><span class="lbl">Lines</span></button>
@@ -238,6 +460,8 @@
 
   <script>
     (function(){
+
+
       // ----- Core refs -----
       const svg = document.getElementById("canvas");
       const nodesLayer = document.getElementById("nodes-layer");
@@ -254,6 +478,7 @@
       const projNameInput = document.getElementById("project-name");
       const createBtn = document.getElementById("create-project");
       const projLabel = document.getElementById("proj-label");
+      const projectClose = document.getElementById("project-close");
 
       const btnSwitch = document.getElementById("btn-switch");
       const btnNew    = document.getElementById("btn-new");
@@ -267,11 +492,25 @@
       const paletteEl = document.getElementById("palette");
       const colorInput = document.getElementById("palette-color-input");
 
+      /* Description overlay refs */
+      const descOverlay    = document.getElementById("desc-overlay");
+      const descCard       = document.getElementById("desc-card");
+      const descNodeLabel  = document.getElementById("desc-node-label");
+      const descText       = document.getElementById("desc-text");
+      const descCancelBtn  = document.getElementById("desc-cancel");
+      const descSaveBtn    = document.getElementById("desc-save");
+
+      /* Rename overlay refs */
+      const renameOverlay  = document.getElementById("rename-overlay");
+      const renameInput    = document.getElementById("rename-input");
+      const renameCancel   = document.getElementById("rename-cancel");
+      const renameSave     = document.getElementById("rename-save");
+
+
       /* Mobile refs (exact placement: appended within Core refs) */
       const hamburger = document.getElementById("hamburger");
       const hambMenu  = document.getElementById("hamburger-menu");
-      const mUndo     = document.getElementById("m-undo");
-      const mRedo     = document.getElementById("m-redo");
+
       const toolLines = document.getElementById("tool-lines");
       const toolEdit  = document.getElementById("tool-edit");
       const toolDelete= document.getElementById("tool-delete");
@@ -289,7 +528,12 @@
       let menuNode = null;
       let lastHoverNode = null;
       let dragCandidate = null;
+
+      // Node state
       let selectedNodeId = null;
+      let descNode = null;  // node currently being edited in description modal
+      let renameNodeRef = null; // node currently being renamed
+
 
       // Pointer UX
       const LONG_PRESS_MS = 500;
@@ -329,6 +573,43 @@
         if (!/^#([0-9a-f]{6})$/i.test(s)) return '#3b82f6';
         return s.toLowerCase();
       };
+
+      function setNodeDescription(node, text){
+        const old = node.description || "";
+        node.description = text;
+        pushAction({ type:"SET_DESCRIPTION", at:Date.now(), id:node.id, from:old, to:text });
+      }
+
+      function openDescriptionModal(node){
+        descNode = node;
+        descNodeLabel.textContent = `Node: ${node.label}`;
+        descText.value = node.description || "";
+        descOverlay.style.display = "flex";
+      }
+
+      function closeDescriptionModal(){
+        descOverlay.style.display = "none";
+        descNode = null;
+      }
+
+      function openRenameModal(node){
+        renameNodeRef = node;
+        renameInput.value = node.label || "";
+        renameOverlay.style.display = "flex";
+        // small delay so focus works reliably on mobile
+        setTimeout(() => {
+          renameInput.focus();
+          renameInput.select();
+        }, 10);
+      }
+
+      function closeRenameModal(){
+        renameOverlay.style.display = "none";
+        renameNodeRef = null;
+      }
+
+
+
 
       // ----- IndexedDB -----
       function openDB(){
@@ -460,7 +741,10 @@
       async function persistSnapshot(){ if (!currentProject) return; const latest=await loadLatestState(currentProject.id); const newRev=latest.rev+1; await saveStateSnapshot(currentProject.id,newRev,snapshot()); await updateProjectMeta({pointer:newRev, palette}); setStatus(`Saved rev ${newRev}`); }
 
       // ----- Graph CRUD -----
-      function makeDefaultStyle(){ const c = selectedColor(); return { shape:'circle', fill:c, stroke:c }; }
+      function makeDefaultStyle(){
+        const c = selectedColor();
+        return { shape:'pill', fill:c, stroke:c };   // was 'circle'
+      }
 
 
 
@@ -503,6 +787,7 @@
       }
 
       // ----- Rendering -----
+      // ----- Rendering -----
       function renderNodes() {
         nodesLayer.innerHTML = "";
         nodes.forEach(node => {
@@ -514,29 +799,55 @@
           const isSelected = node.id === selectedNodeId;
 
           let shapeEl;
-          if (style.shape === 'rect') {
+          if (style.shape === 'pill' || !style.shape) {
+            // pill: width based on label length, minimum ≈ 2 circles wide
+            const label = node.label || "";
+            const baseWidth = 72;              // ≈ two 36px circles
+            const dynWidth  = label.length * 9 + 24; // rough per-char sizing
+            const width     = Math.max(baseWidth, dynWidth);
+            const height    = 32;
+
             shapeEl = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-            shapeEl.setAttribute("x", node.x - 18); shapeEl.setAttribute("y", node.y - 18);
-            shapeEl.setAttribute("width", 36); shapeEl.setAttribute("height", 36); shapeEl.setAttribute("rx", 6);
+            shapeEl.setAttribute("x", node.x - width / 2);
+            shapeEl.setAttribute("y", node.y - height / 2);
+            shapeEl.setAttribute("width",  width);
+            shapeEl.setAttribute("height", height);
+            shapeEl.setAttribute("rx", height / 2);  // full pill
+          } else if (style.shape === 'rect') {
+            shapeEl = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            shapeEl.setAttribute("x", node.x - 18);
+            shapeEl.setAttribute("y", node.y - 18);
+            shapeEl.setAttribute("width", 36);
+            shapeEl.setAttribute("height", 36);
+            shapeEl.setAttribute("rx", 6);
           } else if (style.shape === 'triangle') {
             shapeEl = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
-            const p1 = `${node.x},${node.y-20}`, p2 = `${node.x-18},${node.y+16}`, p3 = `${node.x+18},${node.y+16}`;
+            const p1 = `${node.x},${node.y-20}`;
+            const p2 = `${node.x-18},${node.y+16}`;
+            const p3 = `${node.x+18},${node.y+16}`;
             shapeEl.setAttribute("points", `${p1} ${p2} ${p3}`);
           } else {
+            // fallback circle
             shapeEl = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-            shapeEl.setAttribute("cx", node.x); shapeEl.setAttribute("cy", node.y); shapeEl.setAttribute("r", 18);
+            shapeEl.setAttribute("cx", node.x);
+            shapeEl.setAttribute("cy", node.y);
+            shapeEl.setAttribute("r", 18);
           }
 
-    // normal stroke vs selected stroke
+          // normal stroke vs selected stroke
           shapeEl.setAttribute("fill", style.fill);
           shapeEl.setAttribute("stroke", isSelected ? "#ffffff" : style.stroke);
           shapeEl.setAttribute("stroke-width", isSelected ? "3" : "2");
 
           const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-          text.setAttribute("x", node.x); text.setAttribute("y", node.y + 4); text.setAttribute("text-anchor", "middle");
+          text.setAttribute("x", node.x);
+          text.setAttribute("y", node.y + 4);
+          text.setAttribute("text-anchor", "middle");
           text.textContent = node.label;
 
-          g.appendChild(shapeEl); g.appendChild(text); nodesLayer.appendChild(g);
+          g.appendChild(shapeEl);
+          g.appendChild(text);
+          nodesLayer.appendChild(g);
 
           g.addEventListener("pointerenter", ()=>{ lastHoverNode = node; });
           g.addEventListener("pointerleave", ()=>{ if (lastHoverNode && lastHoverNode.id===node.id) lastHoverNode=null; });
@@ -547,7 +858,7 @@
           g.addEventListener("pointerup", cancelPressTimer, { passive:true });
           g.addEventListener("pointerleave", cancelPressTimer, { passive:true });
 
-    /* Mobile taps and two-finger menu (unchanged) */
+          /* Mobile taps and two-finger menu */
           g.addEventListener("pointerdown", ()=>{ tapMoved=false; });
           g.addEventListener("pointermove", ()=>{ tapMoved=true; });
           g.addEventListener("pointerup", (e)=> handleNodePointerUp(e, node), { passive:true });
@@ -557,6 +868,7 @@
         });
         setStatus(`Nodes: ${nodes.length} | Links: ${links.length}`);
       }
+
 
 
 
@@ -613,7 +925,6 @@
         const action = btn.dataset.action;
 
         if (action === "connect") {
-    // Hide the menu and start desktop-style linking (line follows pointer)
           const from = menuNode;
           closeMenu();
           startConnectionFrom(from, { immediateFollow: true });
@@ -621,8 +932,18 @@
         }
 
         if (action === "rename") {
-          const val = prompt("New name:", menuNode.label);
-          if (val && val.trim()) { renameNodeWrapped(menuNode, val.trim()); }
+          const node = menuNode;
+          closeMenu();
+          openRenameModal(node);
+          return;
+        }
+
+
+        if (action === "description") {        // NEW
+          const node = menuNode;
+          closeMenu();
+          openDescriptionModal(node);
+          return;
         }
 
         if (action === "duplicate") { duplicateNodeWrapped(menuNode, true); }
@@ -630,6 +951,7 @@
 
         closeMenu();
       });
+
 
       wrapper.addEventListener("pointerdown", (e)=>{
         if (e.target === svg) closeMenu();
@@ -650,7 +972,20 @@
         if (mod && k==="s"){ e.preventDefault(); await persistSnapshot(); return; }
         if (mod && k==="z"){ e.preventDefault(); await doUndo(); return; }
         if (mod && k==="y"){ e.preventDefault(); await doRedo(); return; }
-        if (k==="escape"){ closeMenu(); cancelLinking(); return; }
+
+        if (k === "escape") {
+          if (gate.style.display === "flex") {   // NEW
+            gateOff();
+            return;
+          }
+          if (renameOverlay.style.display === "flex") { closeRenameModal(); return; }
+          if (descOverlay.style.display === "flex") { closeDescriptionModal(); return; }
+          closeMenu();
+          cancelLinking();
+          return;
+        }
+
+
 
         if (!currentProject) return;
         if (k==="n"){
@@ -770,20 +1105,38 @@
 
 
 
-
-
       // ----- Add node on empty canvas (mobile friendly) -----
       svg.addEventListener("pointerdown", (e)=>{
         if (e.button === 2) e.preventDefault();
-        const isNode = !!e.target.closest(".node");
-        const isLayer = (e.target === svg) || (e.target === nodesLayer) || (e.target === linksLayer);
-        if (!isLayer && !isNode) return;
+
+        // if click started on an existing node, do nothing here
+        const nodeHit = e.target.closest(".node");
+        if (nodeHit) return;
+
+        // only allow creation on raw SVG background, not layers/lines
+        if (e.target !== svg) return;
+
         if (!currentProject){ gateOn(); return; }
         if (linkingFrom){ cancelLinking(); setStatus("Link cancelled"); return; }
-        if (isNode) return;
+
+        // avoid accidental creation when clicking very near an existing node
         const p = svgPoint(e);
+        const nearExisting = nodes.some(n => dist(n.x, n.y, p.x, p.y) < 32); // ~node radius + margin
+        if (nearExisting) {
+          // close enough to a node that it was probably a missed drag; ignore
+          return;
+        }
+
         addNodeWrapped(p.x, p.y);
       });
+
+
+      gate.addEventListener("pointerdown", (e) => {
+        if (e.target === gate) {
+          gateOff();
+        }
+      });      
+
 
       // ----- Linking (desktop + touch) -----
       function startConnectionFrom(node, opts={}){
@@ -893,9 +1246,15 @@
         pickerBtn.className = "swatch picker";
         pickerBtn.title = "Pick a color";
         pickerBtn.innerHTML = "<span>＋</span>";
+        pickerBtn.addEventListener("click", () => {
+          // optionally sync current color into the picker
+          colorInput.value = normHex(palette.colors[palette.selected] || '#3b82f6');
+          colorInput.click();     // opens native color picker without tapping the input itself
+        });
         paletteEl.appendChild(pickerBtn);
 
-        positionColorInput();
+
+
       }
 
       function positionColorInput(){
@@ -931,6 +1290,48 @@
 
       window.addEventListener("resize", positionColorInput);
 
+
+      descCancelBtn.addEventListener("click", closeDescriptionModal);
+      descSaveBtn.addEventListener("click", ()=>{
+        if (!descNode) { closeDescriptionModal(); return; }
+        setNodeDescription(descNode, descText.value);
+        closeDescriptionModal();
+      });
+
+      // close when tapping outside the card on mobile/desktop
+      descOverlay.addEventListener("pointerdown", (e)=>{
+        if (e.target === descOverlay) closeDescriptionModal();
+      });
+
+      // Rename overlay events
+      renameCancel.addEventListener("click", closeRenameModal);
+      renameSave.addEventListener("click", ()=>{
+        if (!renameNodeRef) { closeRenameModal(); return; }
+        const val = (renameInput.value || "").trim();
+        if (val) {
+          renameNodeWrapped(renameNodeRef, val);
+        }
+        closeRenameModal();
+      });
+
+      // Enter key submits rename, Esc cancels while overlay is open
+      renameInput.addEventListener("keydown", (e)=>{
+        if (e.key === "Enter") {
+          e.preventDefault();
+          renameSave.click();
+        }
+        if (e.key === "Escape") {
+          e.preventDefault();
+          closeRenameModal();
+        }
+      });
+
+      renameOverlay.addEventListener("pointerdown", (e)=>{
+        if (e.target === renameOverlay) closeRenameModal();
+      });
+
+
+
       // ----- Sidebar toggle -----
       let sidebarOpen = false;
       btnHelp.addEventListener("click", ()=>{
@@ -950,6 +1351,7 @@
           hambMenu.style.display = "none";
         }
       });
+
       hambMenu.addEventListener("click", async (e)=>{
         const b = e.target.closest("button"); if (!b) return;
         const act = b.getAttribute("data-mobile");
@@ -971,15 +1373,18 @@
           const ok = confirm(`Delete project "${currentProject.name}"? This cannot be undone.`); if (!ok) return;
           await deleteProject(currentProject.id); await refreshProjectList(); gateOn();
         }
+        if (act==="save"){                         // NEW
+          await persistSnapshot();
+        }
         if (act==="hint"){
           sidebarOpen = true; sidebar.style.display = "flex";
         }
         hambMenu.style.display = "none";
       });
 
-      // Mobile Undo/Redo buttons
-      mUndo.addEventListener("click", doUndo);
-      mRedo.addEventListener("click", doRedo);
+      projectClose.addEventListener("click", () => {
+        gateOff();
+      });
 
       // Tool rail: Lines/Edit/Delete modes
       function syncToolButtons(){
@@ -1019,7 +1424,7 @@
           deleteNodeWrapped(node);
           return;
         }
-        
+
         if (linesMode){
           if (!chainFrom){
             chainFrom = node;
@@ -1168,6 +1573,7 @@
         try{ const p = await createProject(name); projNameInput.value = ""; await refreshProjectList(); await openProject(p); }
         catch(e){ setStatus("Project create error (name exists?)"); }
       });
+
       btnUndo.addEventListener("click", doUndo);
       btnRedo.addEventListener("click", doRedo);
       btnSave.addEventListener("click", persistSnapshot);
