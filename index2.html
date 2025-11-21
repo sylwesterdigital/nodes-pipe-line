@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8" />
 
+
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+
 
   <meta name="theme-color" content="#13141a">
   <link rel="manifest" href="data:application/manifest+json,{&quot;name&quot;:&quot;Node Canvas&quot;,&quot;display&quot;:&quot;standalone&quot;}">
@@ -136,6 +138,7 @@
       background:transparent;
     }
 
+
     .disabled-cover { position:absolute; inset:0; pointer-events:auto; }
 
     /* Project gate modal */
@@ -180,6 +183,8 @@
     #hamburger-menu{position:absolute;right:12px;top:60px;z-index:41;background:#0f172a;border:1px solid #334155;border-radius:12px;box-shadow:0 12px 30px var(--shadow);display:none;min-width:200px;overflow:hidden}
     #hamburger-menu button{width:100%;padding:12px 14px;background:transparent;border:0;color:var(--text);text-align:left;font-size:16px}
     #hamburger-menu button:hover{background:#1f2937}
+
+
 
     #mobile-undo-redo{
       position:absolute;
@@ -233,6 +238,7 @@
       font-size:11px;
       color:#ffffff;             
     }
+
 
     /* Node description overlay */
     #desc-overlay{
@@ -290,6 +296,7 @@
       margin-top:4px;
     }
 
+
     /* Rename node overlay */
     #rename-overlay{
       position:absolute;
@@ -324,13 +331,15 @@
       border-radius:10px;
       border:1px solid var(--muted-2);
       background:#020617;
-      color:#var(--text);
+      color:var(--text);
       font-size:16px;
     }
 
     @media (max-width: 767px) {
       #topbar { display:none; }
     }
+
+
   </style>
 </head>
 <body>
@@ -341,12 +350,7 @@
       • Drag a node to move it (links follow). Long-press a node for actions.<br>
       • Desktop: hover a node and press N to start a link.<br>
       • Touch: start connection, touch canvas to begin guide, lift on target node.<br>
-      • Undo/Redo: Ctrl/⌘+Z / Ctrl/⌘+Y (desktop). Save: Ctrl/⌘+S.<br>
-      • Create node: click/tap empty canvas (not on an existing node).<br>
-      • Mobile: use the left tool rail (Lines/Edit/Delete) to change tap behavior.
-      • Pan canvas: hold Space and drag, or drag with the middle mouse button on empty canvas.<br>
-      • Mobile: drag with two fingers on empty canvas to pan the canvas.<br>
-
+      • Undo/Redo: Ctrl/⌘+Z / Ctrl/⌘+Y (desktop). Save: Ctrl/⌘+S.
     </div>
   </aside>
 
@@ -376,6 +380,7 @@
     </div>
   </div>
 
+
   <div id="canvas-wrapper">
     <svg id="canvas">
       <g id="links-layer"></g>
@@ -392,6 +397,7 @@
       <button class="danger" data-action="delete">Delete</button>
     </div>
 
+
     <div id="topbar">
       <button id="btn-help" class="btn" title="Show help">?</button>
       <span class="label">Project:</span>
@@ -402,6 +408,8 @@
       <button id="btn-dup" class="btn">Duplicate…</button>
       <button id="btn-del" class="btn danger">Delete</button>
     </div>
+
+
 
     <div id="palette"></div>
     <input id="palette-color-input" type="color" aria-label="Pick color" />
@@ -422,9 +430,10 @@
       </div>
     </div>
 
+
     <div id="gate-cover" class="disabled-cover" style="display:none;"></div>
 
-    <!-- Mobile controls -->
+    <!-- Mobile controls (exact placement: appended at end of #canvas-wrapper) -->
     <button id="hamburger" aria-label="Menu"><span>☰</span></button>
     <div id="hamburger-menu" role="menu">
       <button data-mobile="hint">Hint</button>
@@ -441,6 +450,7 @@
       <button id="btn-save" class="btn primary" title="Save">Save</button>
     </div>
 
+
     <div id="tool-rail">
       <button id="tool-lines"  class="tool" title="Lines mode"><span class="lbl">Lines</span></button>
       <button id="tool-edit"   class="tool" title="Edit mode"><span class="lbl">Edit</span></button>
@@ -450,6 +460,7 @@
 
   <script>
     (function(){
+
 
       // ----- Core refs -----
       const svg = document.getElementById("canvas");
@@ -495,7 +506,8 @@
       const renameCancel   = document.getElementById("rename-cancel");
       const renameSave     = document.getElementById("rename-save");
 
-      /* Mobile refs */
+
+      /* Mobile refs (exact placement: appended within Core refs) */
       const hamburger = document.getElementById("hamburger");
       const hambMenu  = document.getElementById("hamburger-menu");
 
@@ -519,18 +531,15 @@
 
       // Node state
       let selectedNodeId = null;
-      let descNode = null;      // node currently being edited in description modal
+      let descNode = null;  // node currently being edited in description modal
       let renameNodeRef = null; // node currently being renamed
+
 
       // Pointer UX
       const LONG_PRESS_MS = 500;
       const DRAG_MENU_CANCEL_PX = 6;
       let pressTimer = null;
       let downX=0, downY=0;
-
-      // Background tap → create node (but not during pan)
-      let bgTapCandidate = null;
-      const BG_TAP_CANCEL_PX = 6;      
 
       // Projects/History (IndexedDB)
       let db = null;
@@ -540,62 +549,12 @@
       let undoStack = [];
       let redoStack = [];
 
-      /* Mobile tool modes */
+      /* Mobile tool modes (exact placement: appended near other state) */
       let linesMode = false;   // tap sequence of nodes to chain-connect
       let editMode  = false;   // tap opens node context menu
       let deleteMode= false;   // tap deletes node
       let chainFrom = null;    // last node tapped in linesMode
       let tapMoved  = false;   // tracks movement to distinguish drag vs tap
-
-      // ----- Canvas view (endless pan via viewBox) -----
-      const viewBox = { x: 0, y: 0, w: 0, h: 0 };
-      let isPanning = false;
-      let panStart = { x: 0, y: 0 };
-      let viewBoxStart = { x: 0, y: 0 };
-      let spacePressed = false;
-
-      function initViewBox() {
-        const rect = svg.getBoundingClientRect();
-        viewBox.w = rect.width || 1024;
-        viewBox.h = rect.height || 768;
-        svg.setAttribute("viewBox", `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
-      }
-
-      function updateViewBox() {
-        svg.setAttribute("viewBox", `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
-      }
-
-      function startPan(e) {
-        isPanning = true;
-        panStart.x = e.clientX;
-        panStart.y = e.clientY;
-        viewBoxStart.x = viewBox.x;
-        viewBoxStart.y = viewBox.y;
-        svg.setPointerCapture(e.pointerId);
-        svg.addEventListener("pointermove", onPanMove);
-        svg.addEventListener("pointerup", endPan, { once: true });
-        setStatus("Panning (Space + drag)");
-      }
-
-      function onPanMove(e) {
-        if (!isPanning) return;
-        const rect = svg.getBoundingClientRect();
-        const scaleX = viewBox.w / rect.width;
-        const scaleY = viewBox.h / rect.height;
-        const dx = (e.clientX - panStart.x) * scaleX;
-        const dy = (e.clientY - panStart.y) * scaleY;
-        viewBox.x = viewBoxStart.x - dx;
-        viewBox.y = viewBoxStart.y - dy;
-        updateViewBox();
-      }
-
-      function endPan(e) {
-        isPanning = false;
-        if (e.pointerId != null) {
-          try { svg.releasePointerCapture(e.pointerId); } catch(_) {}
-        }
-        svg.removeEventListener("pointermove", onPanMove);
-      }
 
       // ----- Utils -----
       function setStatus(text){ statusEl.textContent = text; }
@@ -637,6 +596,7 @@
         renameNodeRef = node;
         renameInput.value = node.label || "";
         renameOverlay.style.display = "flex";
+        // small delay so focus works reliably on mobile
         setTimeout(() => {
           renameInput.focus();
           renameInput.select();
@@ -647,6 +607,9 @@
         renameOverlay.style.display = "none";
         renameNodeRef = null;
       }
+
+
+
 
       // ----- IndexedDB -----
       function openDB(){
@@ -780,58 +743,50 @@
       // ----- Graph CRUD -----
       function makeDefaultStyle(){
         const c = selectedColor();
-        return { shape:'pill', fill:c, stroke:c };
+        return { shape:'pill', fill:c, stroke:c };   // was 'circle'
       }
+
+
 
       function addNodeWrapped(x,y){
         const node={id:nextId++,x,y,label:"N"+(nextId-1), style: makeDefaultStyle()};
         nodes.push(node);
-        selectedNodeId = node.id;
+        selectedNodeId = node.id;        // NEW: select the new node
         renderNodes();
         renderLinks();
         pushAction({type:"ADD_NODE",at:Date.now(),node});
       }
 
-      function moveNodeWrapped(node){
-        renderLinks();
-        pushAction({type:"MOVE_NODE",at:Date.now(),id:node.id,x:node.x,y:node.y});
-      }
+
+
+
+      function moveNodeWrapped(node){ renderLinks(); pushAction({type:"MOVE_NODE",at:Date.now(),id:node.id,x:node.x,y:node.y}); }
 
       function deleteNodeWrapped(node){
         nodes=nodes.filter(n=>n.id!==node.id);
         links=links.filter(l=>l.from!==node.id&&l.to!==node.id);
-        if (selectedNodeId === node.id) selectedNodeId = null;
+        if (selectedNodeId === node.id) selectedNodeId = null;  // NEW
         renderAll();
         pushAction({type:"DELETE_NODE",at:Date.now(),id:node.id});
       }
 
+
+
+
       function duplicateNodeWrapped(node, keepLabel=false){
         const newLabel = keepLabel ? (node.label ? node.label + "1" : "N"+nextId) : ("N"+nextId);
         const n2={ id:nextId++, x:node.x+28, y:node.y+28, label:newLabel, style: JSON.parse(JSON.stringify(node.style||makeDefaultStyle())) };
-        nodes.push(n2);
-        renderAll();
-        pushAction({type:"DUPLICATE_NODE",at:Date.now(),from:node.id,to:n2.id});
+        nodes.push(n2); renderAll(); pushAction({type:"DUPLICATE_NODE",at:Date.now(),from:node.id,to:n2.id});
       }
-
-      function connectNodesWrapped(aId,bId){
-        links.push({from:aId,to:bId, style:{color:selectedColor()}});
-        renderLinks();
-        pushAction({type:"CONNECT",at:Date.now(),from:aId,to:bId,color:selectedColor()});
-      }
-
-      function renameNodeWrapped(node,newLabel){
-        const old=node.label;
-        node.label=newLabel;
-        updateNodeGraphics(node);
-        pushAction({type:"RENAME_NODE",at:Date.now(),id:node.id,from:old,to:newLabel});
-      }
-
+      function connectNodesWrapped(aId,bId){ links.push({from:aId,to:bId, style:{color:selectedColor()}}); renderLinks(); pushAction({type:"CONNECT",at:Date.now(),from:aId,to:bId,color:selectedColor()}); }
+      function renameNodeWrapped(node,newLabel){ const old=node.label; node.label=newLabel; updateNodeGraphics(node); pushAction({type:"RENAME_NODE",at:Date.now(),id:node.id,from:old,to:newLabel}); }
       function restyleNodeWrapped(node, patch){
         node.style = { ...(node.style||makeDefaultStyle()), ...patch };
         updateNodeGraphics(node);
         pushAction({type:"STYLE_NODE", at:Date.now(), id:node.id, patch});
       }
 
+      // ----- Rendering -----
       // ----- Rendering -----
       function renderNodes() {
         nodesLayer.innerHTML = "";
@@ -845,9 +800,10 @@
 
           let shapeEl;
           if (style.shape === 'pill' || !style.shape) {
+            // pill: width based on label length, minimum ≈ 2 circles wide
             const label = node.label || "";
-            const baseWidth = 72;
-            const dynWidth  = label.length * 9 + 24;
+            const baseWidth = 72;              // ≈ two 36px circles
+            const dynWidth  = label.length * 9 + 24; // rough per-char sizing
             const width     = Math.max(baseWidth, dynWidth);
             const height    = 32;
 
@@ -856,7 +812,7 @@
             shapeEl.setAttribute("y", node.y - height / 2);
             shapeEl.setAttribute("width",  width);
             shapeEl.setAttribute("height", height);
-            shapeEl.setAttribute("rx", height / 2);
+            shapeEl.setAttribute("rx", height / 2);  // full pill
           } else if (style.shape === 'rect') {
             shapeEl = document.createElementNS("http://www.w3.org/2000/svg", "rect");
             shapeEl.setAttribute("x", node.x - 18);
@@ -871,12 +827,14 @@
             const p3 = `${node.x+18},${node.y+16}`;
             shapeEl.setAttribute("points", `${p1} ${p2} ${p3}`);
           } else {
+            // fallback circle
             shapeEl = document.createElementNS("http://www.w3.org/2000/svg", "circle");
             shapeEl.setAttribute("cx", node.x);
             shapeEl.setAttribute("cy", node.y);
             shapeEl.setAttribute("r", 18);
           }
 
+          // normal stroke vs selected stroke
           shapeEl.setAttribute("fill", style.fill);
           shapeEl.setAttribute("stroke", isSelected ? "#ffffff" : style.stroke);
           shapeEl.setAttribute("stroke-width", isSelected ? "3" : "2");
@@ -911,6 +869,9 @@
         setStatus(`Nodes: ${nodes.length} | Links: ${links.length}`);
       }
 
+
+
+
       function renderLinks() {
         linksLayer.innerHTML = "";
         links.forEach(link => {
@@ -934,11 +895,11 @@
         });
         setStatus(`Nodes: ${nodes.length} | Links: ${links.length}`);
       }
-
       function renderAll(){ renderNodes(); renderLinks(); }
       function updateNodeGraphics(){ renderAll(); }
 
       // ----- Context menu -----
+// ----- Context menu -----
       function openMenu(e, node){
         if (linkingFrom || dragNode) return;
         e.preventDefault();
@@ -977,7 +938,8 @@
           return;
         }
 
-        if (action === "description") {
+
+        if (action === "description") {        // NEW
           const node = menuNode;
           closeMenu();
           openDescriptionModal(node);
@@ -990,27 +952,17 @@
         closeMenu();
       });
 
+
       wrapper.addEventListener("pointerdown", (e)=>{
         if (e.target === svg) closeMenu();
       });
 
-      // ----- Space key pan mode -----
-      window.addEventListener("keydown", (e) => {
-        if (e.code === "Space" && !spacePressed) {
-          spacePressed = true;
-          svg.style.cursor = "grab";
-          e.preventDefault();
-        }
-      });
 
-      window.addEventListener("keyup", (e) => {
-        if (e.code === "Space") {
-          spacePressed = false;
-          if (!isPanning) {
-            svg.style.cursor = "";
-          }
-        }
-      });
+
+
+
+
+
 
       // ----- Keyboard (desktop) -----
       window.addEventListener("keydown", async (e)=>{
@@ -1022,7 +974,7 @@
         if (mod && k==="y"){ e.preventDefault(); await doRedo(); return; }
 
         if (k === "escape") {
-          if (gate.style.display === "flex") {
+          if (gate.style.display === "flex") {   // NEW
             gateOff();
             return;
           }
@@ -1033,10 +985,13 @@
           return;
         }
 
+
+
         if (!currentProject) return;
         if (k==="n"){
           if (!linkingFrom && lastHoverNode){
             closeMenu();
+            // immediate cursor-follow for desktop quick-connect
             startConnectionFrom(lastHoverNode, { immediateFollow: true });
           }
         }
@@ -1044,30 +999,40 @@
         if (e.shiftKey && k==="d"){ if (lastHoverNode){ duplicateNodeWrapped(lastHoverNode, true); } }
       });
 
+
+
+
       // ----- Pointer-based drag/move -----
+// ----- Pointer-based drag/move -----
+// Handles press timing for long-press, guards against accidental drag showing the menu,
+// enables right-click to open the contextual menu, and preserves linking completion.
       function startPressTimer(e, node){
         if (linkingFrom) return;
         cancelPressTimer();
         downX = e.clientX; downY = e.clientY;
+  // Long-press opens contextual menu on touch/primary mouse when stationary.
         pressTimer = setTimeout(()=>{ openMenu(e, node); }, LONG_PRESS_MS);
       }
 
+// Cancels any pending long-press timer when movement or release happens.
       function cancelPressTimer(){
         if (pressTimer){ clearTimeout(pressTimer); pressTimer=null; }
       }
 
+// Pointer down on a node: primary starts drag, secondary opens menu, middle ignored.
+// If linking is active and a node is pressed, completes the link.
       function onNodePointerDown(e, node){
         if (!currentProject){ gateOn(); return; }
 
-        // Right-click → open menu immediately
+  // Right-click → open menu immediately
         if (e.button === 2){
           openMenu(e, node);
           return;
         }
-        // Ignore middle button (used for pan on background)
+  // Ignore middle button
         if (e.button === 1) return;
 
-        // If currently linking and a node is pressed, finish the connection.
+  // If currently linking and a node is pressed, finish the connection.
         if (linkingFrom){
           e.preventDefault();
           if (node.id !== linkingFrom.id) { connectNodesWrapped(linkingFrom.id, node.id); }
@@ -1078,6 +1043,7 @@
         e.preventDefault();
         e.stopPropagation();
 
+  // Do not start drag yet; just mark candidate
         dragCandidate = { node, pointerId: e.pointerId };
 
         svg.setPointerCapture(e.pointerId);
@@ -1085,6 +1051,9 @@
         svg.addEventListener("pointerup", onCanvasPointerUp, { once:true });
       }
 
+
+// Pointer move on canvas: cancels long-press if moved, updates temp link if linking,
+// otherwise updates node position during drag and re-renders.
       function onCanvasPointerMove(e){
         if (pressTimer && dist(e.clientX,e.clientY,downX,downY) > DRAG_MENU_CANCEL_PX) {
           cancelPressTimer();
@@ -1097,7 +1066,7 @@
           return;
         }
 
-        // No active drag yet: turn candidate into real drag if moved enough
+  // No active drag yet: turn candidate into real drag if moved enough
         if (!dragNode && dragCandidate && e.pointerId === dragCandidate.pointerId){
           const p = svgPoint(e);
           const node = dragCandidate.node;
@@ -1106,6 +1075,7 @@
           dragOffset.y = node.y - p.y;
           dragCandidate = null;
 
+          // NEW: mark this node as selected (last dragged node)
           selectedNodeId = node.id;
           updateNodeGraphics();
 
@@ -1120,6 +1090,8 @@
         renderAll();
       }
 
+
+// Pointer up on canvas: finalizes a drag operation and removes move tracking.
       function onCanvasPointerUp(e){
         svg.removeEventListener("pointermove", onCanvasPointerMove);
         cancelPressTimer();
@@ -1132,58 +1104,8 @@
       }
 
 
-      // ----- Mobile two-finger pan (endless canvas on touch) -----
-      let touchPanActive = false;
-      let touchPanStart = { x: 0, y: 0 };
-      let touchViewBoxStart = { x: 0, y: 0 };
 
-      svg.addEventListener("touchstart", (e) => {
-        // Only start panning on background, with two fingers
-        if (e.touches.length === 2 && e.target === svg) {
-          e.preventDefault();
-          touchPanActive = true;
-
-          // Do not treat this gesture as a tap that can create a node
-          bgTapCandidate = null;
-
-          const t = e.touches[0];
-          touchPanStart.x = t.clientX;
-          touchPanStart.y = t.clientY;
-          touchViewBoxStart.x = viewBox.x;
-          touchViewBoxStart.y = viewBox.y;
-          setStatus("Panning (two-finger drag)");
-        }
-      }, { passive: false });
-
-
-      svg.addEventListener("touchmove", (e) => {
-        if (!touchPanActive) return;
-        if (e.touches.length < 1) return;
-        e.preventDefault();
-
-        const rect = svg.getBoundingClientRect();
-        const scaleX = viewBox.w / rect.width;
-        const scaleY = viewBox.h / rect.height;
-
-        const t = e.touches[0];
-        const dx = (t.clientX - touchPanStart.x) * scaleX;
-        const dy = (t.clientY - touchPanStart.y) * scaleY;
-
-        viewBox.x = touchViewBoxStart.x - dx;
-        viewBox.y = touchViewBoxStart.y - dy;
-        updateViewBox();
-      }, { passive: false });
-
-      svg.addEventListener("touchend", () => {
-        // When fingers are lifted, stop panning
-        if (touchPanActive) {
-          touchPanActive = false;
-          setStatus("Mode: pan / add nodes");
-        }
-      });
-
-
-      // ----- Background: pan or tap-to-add node -----
+      // ----- Add node on empty canvas (mobile friendly) -----
       svg.addEventListener("pointerdown", (e)=>{
         if (e.button === 2) e.preventDefault();
 
@@ -1191,75 +1113,22 @@
         const nodeHit = e.target.closest(".node");
         if (nodeHit) return;
 
-        // only act on raw SVG background, not layers/lines
+        // only allow creation on raw SVG background, not layers/lines
         if (e.target !== svg) return;
-
-        // If we are currently doing a two-finger pan, ignore taps
-        if (touchPanActive) return;
-
-        // Space + drag or middle mouse on background → pan (desktop)
-        if (spacePressed || e.button === 1) {
-          startPan(e);
-          return;
-        }
 
         if (!currentProject){ gateOn(); return; }
         if (linkingFrom){ cancelLinking(); setStatus("Link cancelled"); return; }
 
-        // Start a tap candidate; we will only create the node on pointerup
-        bgTapCandidate = {
-          pointerId: e.pointerId,
-          startX: e.clientX,
-          startY: e.clientY
-        };
-
-        svg.setPointerCapture(e.pointerId);
-        svg.addEventListener("pointermove", onBgPointerMove);
-        svg.addEventListener("pointerup", onBgPointerUp, { once:true });
-      });
-
-      function onBgPointerMove(e){
-        if (!bgTapCandidate || e.pointerId !== bgTapCandidate.pointerId) return;
-        const dx = e.clientX - bgTapCandidate.startX;
-        const dy = e.clientY - bgTapCandidate.startY;
-        if (Math.hypot(dx, dy) > BG_TAP_CANCEL_PX) {
-          // too much movement → not a tap
-          bgTapCandidate = null;
-        }
-      }
-
-      function onBgPointerUp(e){
-        svg.removeEventListener("pointermove", onBgPointerMove);
-        try {
-          svg.releasePointerCapture(e.pointerId);
-        } catch(_) {}
-
-        if (!bgTapCandidate || e.pointerId !== bgTapCandidate.pointerId){
-          bgTapCandidate = null;
-          return;
-        }
-
-        // If a two-finger pan was active during this gesture, do not add a node
-        if (touchPanActive) {
-          bgTapCandidate = null;
-          return;
-        }
-
-        if (!currentProject){
-          bgTapCandidate = null;
-          return;
-        }
-
+        // avoid accidental creation when clicking very near an existing node
         const p = svgPoint(e);
-        const nearExisting = nodes.some(n => dist(n.x, n.y, p.x, p.y) < 32);
-        if (!nearExisting) {
-          addNodeWrapped(p.x, p.y);
+        const nearExisting = nodes.some(n => dist(n.x, n.y, p.x, p.y) < 32); // ~node radius + margin
+        if (nearExisting) {
+          // close enough to a node that it was probably a missed drag; ignore
+          return;
         }
 
-        bgTapCandidate = null;
-      }
-
-
+        addNodeWrapped(p.x, p.y);
+      });
 
 
       gate.addEventListener("pointerdown", (e) => {
@@ -1268,10 +1137,12 @@
         }
       });      
 
+
       // ----- Linking (desktop + touch) -----
       function startConnectionFrom(node, opts={}){
         if (!node) return;
 
+        // NEW: highlight starting node while in connection mode
         selectedNodeId = node.id;
         updateNodeGraphics();
 
@@ -1291,6 +1162,7 @@
           svg.addEventListener("pointerdown", onLinkPointerDown, { once:true });
         }
       }
+
 
       function onLinkPointerDown(e){
         if (!linkingFrom) return;
@@ -1325,19 +1197,31 @@
         svg.removeEventListener("pointerdown", onLinkPointerDown);
       }
 
-      // prevent context menu while dragging/linking
+
+
+
+// prevent context menu while dragging/linking
+// Suppresses native context menu only during drag or active linking;
+// otherwise allows right-click/two-finger to open the app menu.
       nodesLayer.addEventListener("contextmenu", (e)=>{
         if (dragNode || linkingFrom){ e.preventDefault(); e.stopPropagation(); }
       });
 
+// Allow native bubbling so node <g> handlers can open the custom menu.
+// Only suppress on SVG root when actively dragging/linking.
       svg.addEventListener("contextmenu", (e)=>{
         if (dragNode || linkingFrom){ e.preventDefault(); }
       });
+
+
+
+
 
       // ----- Palette (anchored color input) -----
       function renderPalette(){
         paletteEl.innerHTML = "";
 
+        // swatches
         palette.colors.slice(0,4).forEach((c, i)=>{
           const sw = document.createElement("div");
           sw.className = "swatch" + (palette.selected===i ? " selected" : "");
@@ -1357,15 +1241,20 @@
           paletteEl.appendChild(sw);
         });
 
+        // ＋ picker button
         const pickerBtn = document.createElement("div");
         pickerBtn.className = "swatch picker";
         pickerBtn.title = "Pick a color";
         pickerBtn.innerHTML = "<span>＋</span>";
         pickerBtn.addEventListener("click", () => {
+          // optionally sync current color into the picker
           colorInput.value = normHex(palette.colors[palette.selected] || '#3b82f6');
-          colorInput.click();
+          colorInput.click();     // opens native color picker without tapping the input itself
         });
         paletteEl.appendChild(pickerBtn);
+
+
+
       }
 
       function positionColorInput(){
@@ -1390,7 +1279,6 @@
         if (lastHoverNode) restyleNodeWrapped(lastHoverNode, { fill: val, stroke: val });
         setStatus(`Preview color #${idx+1} → ${val}`);
       });
-
       colorInput.addEventListener("change", async (e)=>{
         const val = normHex(e.target.value);
         const idx = palette.selected || 0;
@@ -1402,6 +1290,7 @@
 
       window.addEventListener("resize", positionColorInput);
 
+
       descCancelBtn.addEventListener("click", closeDescriptionModal);
       descSaveBtn.addEventListener("click", ()=>{
         if (!descNode) { closeDescriptionModal(); return; }
@@ -1409,10 +1298,12 @@
         closeDescriptionModal();
       });
 
+      // close when tapping outside the card on mobile/desktop
       descOverlay.addEventListener("pointerdown", (e)=>{
         if (e.target === descOverlay) closeDescriptionModal();
       });
 
+      // Rename overlay events
       renameCancel.addEventListener("click", closeRenameModal);
       renameSave.addEventListener("click", ()=>{
         if (!renameNodeRef) { closeRenameModal(); return; }
@@ -1423,6 +1314,7 @@
         closeRenameModal();
       });
 
+      // Enter key submits rename, Esc cancels while overlay is open
       renameInput.addEventListener("keydown", (e)=>{
         if (e.key === "Enter") {
           e.preventDefault();
@@ -1438,6 +1330,8 @@
         if (e.target === renameOverlay) closeRenameModal();
       });
 
+
+
       // ----- Sidebar toggle -----
       let sidebarOpen = false;
       btnHelp.addEventListener("click", ()=>{
@@ -1446,7 +1340,9 @@
       });
       btnHelp.addEventListener("keydown", (e)=>{ if(e.key==="Escape" && sidebarOpen){ sidebarOpen=false; sidebar.style.display="none"; } });
 
-      /* ----- Mobile UI behavior ----- */
+      /* ----- Mobile UI behavior (exact placement: appended before Gate & boot) ----- */
+
+      // Mobile hamburger dropdown: mirrors existing actions
       hamburger.addEventListener("click", ()=>{
         hambMenu.style.display = (hambMenu.style.display==="block") ? "none" : "block";
       });
@@ -1477,7 +1373,7 @@
           const ok = confirm(`Delete project "${currentProject.name}"? This cannot be undone.`); if (!ok) return;
           await deleteProject(currentProject.id); await refreshProjectList(); gateOn();
         }
-        if (act==="save"){
+        if (act==="save"){                         // NEW
           await persistSnapshot();
         }
         if (act==="hint"){
@@ -1517,6 +1413,9 @@
       });
       syncToolButtons();
 
+
+
+
       // Node tap handler for Lines/Edit/Delete modes
       function handleNodePointerUp(e, node){
         if (tapMoved) return;
@@ -1529,7 +1428,7 @@
         if (linesMode){
           if (!chainFrom){
             chainFrom = node;
-            selectedNodeId = node.id;
+            selectedNodeId = node.id;   // NEW: highlight chain start
             updateNodeGraphics();
             setStatus(`Chain start: ${node.label}`);
             return;
@@ -1539,7 +1438,7 @@
             setStatus(`Linked ${chainFrom.label} → ${node.label}`);
           }
           chainFrom = node;
-          selectedNodeId = node.id;
+          selectedNodeId = node.id;     // NEW: move selection along the chain
           updateNodeGraphics();
           return;
         }
@@ -1550,6 +1449,9 @@
           return;
         }
       }
+
+
+
 
       // Two-finger long-press to open menu (touch)
       let twoFingerTimer = null;
@@ -1685,19 +1587,9 @@
         gateOn();
         clearGraph();
         renderPalette();
-        initViewBox();
         requestAnimationFrame(positionColorInput);
         setStatus("Mode: create/open a project");
-
-        // keep viewBox size in sync with viewport
-        window.addEventListener("resize", () => {
-          const rect = svg.getBoundingClientRect();
-          viewBox.w = rect.width || viewBox.w;
-          viewBox.h = rect.height || viewBox.h;
-          updateViewBox();
-        });
       }
-
       boot();
     })();
   </script>
