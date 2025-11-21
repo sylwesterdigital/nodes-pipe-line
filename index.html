@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
 
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+
 
   <meta name="theme-color" content="#13141a">
   <link rel="manifest" href="data:application/manifest+json,{&quot;name&quot;:&quot;Node Canvas&quot;,&quot;display&quot;:&quot;standalone&quot;}">
@@ -29,7 +30,11 @@
 
     input, textarea {
       font-size:16px;
-    }    
+    }
+
+    button {
+      touch-action: manipulation;
+    }        
 
     /* Sidebar */
     #sidebar {
@@ -40,7 +45,7 @@
       border-radius:12px; box-shadow:0 20px 60px var(--shadow);
     }
     #sidebar h1 { font-size:18px; }
-    #sidebar .hint { font-size:14px; line-height:1.5; padding:10px; border-radius:10px; background:var(--muted); border:1px solid var(--muted-2); }
+    #sidebar .hint { font-size:16px; line-height:1.5; padding:10px; border-radius:10px; background:var(--muted); border:1px solid var(--muted-2); }
 
     /* Canvas area */
     #canvas-wrapper { flex:1; position:relative; overflow:hidden; }
@@ -57,11 +62,17 @@
     #temp-link { stroke:#fbbf24; stroke-width:2; stroke-dasharray:4 3; stroke-linecap:round; pointer-events:none; display:none; }
 
     #status {
-      position:absolute; left:12px; bottom:12px;
-      padding:8px 12px; border-radius:999px;
-      background:rgba(15,23,42,0.88); border:1px solid rgba(148,163,184,0.5);
-      font-size:14px;
+      position:absolute;
+      left:12px;
+      top:12px;        /* was bottom:12px; */
+      bottom:auto;     /* optional: to override previous bottom if any */
+      padding:8px 12px;
+      border-radius:999px;
+      background:rgba(15,23,42,0.88);
+      border:1px solid rgba(148,163,184,0.5);
+      font-size:16px;
     }
+
 
     #menu {
       position:absolute; min-width:200px; background:#0f172a; border:1px solid #334155;
@@ -265,7 +276,7 @@
     }
 
     #desc-node-label{
-      font-size:14px;
+      font-size:16px;
       opacity:.8;
     }
 
@@ -324,13 +335,50 @@
       border-radius:10px;
       border:1px solid var(--muted-2);
       background:#020617;
-      color:#var(--text);
+      color:var(--text);
       font-size:16px;
     }
 
     @media (max-width: 767px) {
       #topbar { display:none; }
     }
+
+    #zoom-controls{
+      position:absolute;
+      left:12px;
+      bottom: 12px;
+      z-index:40;
+      display:flex;
+      flex-direction:column;   /* stack vertically */
+      gap:8px;
+      align-items:center;      /* keep them narrow */
+      background:var(--pill);
+      font-size:14px;
+    }
+
+    /* make the zoom buttons compact */
+    #zoom-controls .btn{
+      min-width:40px;          /* narrow buttons */
+      padding:6px 10px;        /* smaller padding */
+    }
+
+    #zoom-reset {
+      font-size: 12px;
+    }
+
+    /* zoom label spacing & size */
+    #zoom-controls #zoom-label{
+      min-width:auto;
+      margin:2px 0;
+      font-size:13px;
+      text-align:center;
+    }
+
+
+
+
+
+
   </style>
 </head>
 <body>
@@ -377,6 +425,16 @@
   </div>
 
   <div id="canvas-wrapper">
+
+
+    <div id="zoom-controls">
+      <button id="zoom-out"   class="btn" title="Zoom out">−</button>
+      <span id="zoom-label">100%</span>
+      <button id="zoom-in"    class="btn" title="Zoom in">+</button>
+      <button id="zoom-reset" class="btn" title="Reset zoom to 100%">100%</button>
+      <button id="zoom-fit"   class="btn" title="Fit all nodes">⤢</button>
+    </div>
+
     <svg id="canvas">
       <g id="links-layer"></g>
       <line id="temp-link" x1="0" y1="0" x2="0" y2="0"></line>
@@ -478,6 +536,13 @@
       const btnSave   = document.getElementById("btn-save");
       const gateCover = document.getElementById("gate-cover");
 
+      const zoomInBtn  = document.getElementById("zoom-in");
+      const zoomOutBtn = document.getElementById("zoom-out");
+      const zoomLabel  = document.getElementById("zoom-label");
+      const zoomResetBtn = document.getElementById("zoom-reset");
+      const zoomFitBtn   = document.getElementById("zoom-fit");
+
+
       const paletteEl = document.getElementById("palette");
       const colorInput = document.getElementById("palette-color-input");
 
@@ -502,6 +567,10 @@
       const toolLines = document.getElementById("tool-lines");
       const toolEdit  = document.getElementById("tool-edit");
       const toolDelete= document.getElementById("tool-delete");
+
+
+
+
 
       // ----- Graph state -----
       let nodes = [], links = [], nextId = 1;
@@ -549,21 +618,160 @@
 
       // ----- Canvas view (endless pan via viewBox) -----
       const viewBox = { x: 0, y: 0, w: 0, h: 0 };
+      let baseViewBox = { w: 0, h: 0 };   // initial viewBox size for zoom=1
+
       let isPanning = false;
       let panStart = { x: 0, y: 0 };
       let viewBoxStart = { x: 0, y: 0 };
       let spacePressed = false;
 
+      /* Zoom state */
+      let zoom = 1;
+      const MIN_ZOOM = 0.4;
+      const MAX_ZOOM = 4;
+      const ZOOM_STEP = 1.2;      
+
+      function updateZoomLabel(){
+        if (!zoomLabel) return;
+        zoomLabel.textContent = `${(zoom * 100).toFixed(0)}%`;
+      }
+
       function initViewBox() {
         const rect = svg.getBoundingClientRect();
         viewBox.w = rect.width || 1024;
         viewBox.h = rect.height || 768;
+
+        baseViewBox.w = viewBox.w;
+        baseViewBox.h = viewBox.h;
+
+        zoom = 1;
         svg.setAttribute("viewBox", `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
       }
 
       function updateViewBox() {
         svg.setAttribute("viewBox", `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
       }
+
+
+      function resetZoomTo100(){
+        const rect = svg.getBoundingClientRect();
+        // Fall back to current viewport if baseViewBox is not set
+        viewBox.w = baseViewBox.w || rect.width || 1024;
+        viewBox.h = baseViewBox.h || rect.height || 768;
+        viewBox.x = 0;
+        viewBox.y = 0;
+
+        zoom = 1;
+        updateViewBox();
+        updateZoomLabel();
+        setStatus("Zoom: 100%");
+      }
+
+      function getNodesBounds(){
+        if (!nodes.length) return null;
+        let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        nodes.forEach(n => {
+          if (n.x < minX) minX = n.x;
+          if (n.x > maxX) maxX = n.x;
+          if (n.y < minY) minY = n.y;
+          if (n.y > maxY) maxY = n.y;
+        });
+        return { minX, maxX, minY, maxY };
+      }
+
+      function zoomToFit(){
+        const rect = svg.getBoundingClientRect();
+        const bounds = getNodesBounds();
+
+        // If nothing on canvas: just reset
+        if (!bounds) {
+          resetZoomTo100();
+          return;
+        }
+
+        const padding = 80;
+
+        let contentW = (bounds.maxX - bounds.minX) || 1;
+        let contentH = (bounds.maxY - bounds.minY) || 1;
+        contentW += padding * 2;
+        contentH += padding * 2;
+
+        const viewportRatio = rect.width / rect.height;
+        const contentRatio  = contentW / contentH;
+
+        let boxW, boxH;
+        if (contentRatio > viewportRatio) {
+          // limited by width
+          boxW = contentW;
+          boxH = contentW / viewportRatio;
+        } else {
+          // limited by height
+          boxH = contentH;
+          boxW = contentH * viewportRatio;
+        }
+
+        const cx = (bounds.minX + bounds.maxX) / 2;
+        const cy = (bounds.minY + bounds.maxY) / 2;
+
+        viewBox.w = boxW;
+        viewBox.h = boxH;
+        viewBox.x = cx - boxW / 2;
+        viewBox.y = cy - boxH / 2;
+
+        updateViewBox();
+
+        // Recompute zoom value relative to the base viewBox width
+        const baseW = baseViewBox.w || rect.width || boxW;
+        zoom = baseW / viewBox.w;
+        updateZoomLabel();
+        setStatus("Zoom: fit to map");
+      }
+
+
+
+      function applyZoomFactor(factor, clientX, clientY) {
+        // Clamp target zoom
+        const prevZoom = zoom;
+        let nextZoom = zoom * factor;
+        if (nextZoom < MIN_ZOOM) nextZoom = MIN_ZOOM;
+        if (nextZoom > MAX_ZOOM) nextZoom = MAX_ZOOM;
+
+        const allowedFactor = nextZoom / prevZoom;
+        if (allowedFactor === 1) return;
+
+        const rect = svg.getBoundingClientRect();
+
+        // If no focus point given, zoom toward center of viewport
+        const cx = clientX ?? (rect.left + rect.width / 2);
+        const cy = clientY ?? (rect.top + rect.height / 2);
+
+        // Convert screen point → SVG coords
+        const pt = svg.createSVGPoint();
+        pt.x = cx;
+        pt.y = cy;
+        const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+
+        // Scale viewBox
+        viewBox.w /= allowedFactor;
+        viewBox.h /= allowedFactor;
+
+        // Adjust origin so the focus SVG point stays under the same screen point
+        const nx = svgP.x - ((cx - rect.left) / rect.width) * viewBox.w;
+        const ny = svgP.y - ((cy - rect.top) / rect.height) * viewBox.h;
+        viewBox.x = nx;
+        viewBox.y = ny;
+
+        zoom = nextZoom;
+        updateViewBox();
+        updateZoomLabel();
+        setStatus(`Zoom: ${(zoom * 100).toFixed(0)}%`);
+
+        updateViewBox();
+
+        setStatus(`Zoom: ${(zoom * 100).toFixed(0)}%`);
+      }
+
+
 
       function startPan(e) {
         isPanning = true;
@@ -597,7 +805,23 @@
         svg.removeEventListener("pointermove", onPanMove);
       }
 
+
+
+
       // ----- Utils -----
+
+
+      function isTextEditingTarget(e){
+        const el = e.target;
+        if (!el) return false;
+        const tag = el.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA") return true;
+        if (el.isContentEditable) return true;
+        return false;
+      }
+
+
+
       function setStatus(text){ statusEl.textContent = text; }
       function svgPoint(evt){
         const pt = svg.createSVGPoint();
@@ -996,12 +1220,15 @@
 
       // ----- Space key pan mode -----
       window.addEventListener("keydown", (e) => {
+        if (isTextEditingTarget(e)) return;  // do nothing while typing
         if (e.code === "Space" && !spacePressed) {
           spacePressed = true;
           svg.style.cursor = "grab";
           e.preventDefault();
         }
       });
+
+
 
       window.addEventListener("keyup", (e) => {
         if (e.code === "Space") {
@@ -1014,8 +1241,11 @@
 
       // ----- Keyboard (desktop) -----
       window.addEventListener("keydown", async (e)=>{
+        if (isTextEditingTarget(e)) return;   // ignore shortcuts while typing
+
         const mod = e.ctrlKey || e.metaKey;
         const k = e.key.toLowerCase();
+
 
         if (mod && k==="s"){ e.preventDefault(); await persistSnapshot(); return; }
         if (mod && k==="z"){ e.preventDefault(); await doUndo(); return; }
@@ -1132,6 +1362,7 @@
       }
 
 
+
       // ----- Mobile two-finger pan (endless canvas on touch) -----
       let touchPanActive = false;
       let touchPanStart = { x: 0, y: 0 };
@@ -1146,41 +1377,45 @@
           // Do not treat this gesture as a tap that can create a node
           bgTapCandidate = null;
 
-          const t = e.touches[0];
-          touchPanStart.x = t.clientX;
-          touchPanStart.y = t.clientY;
+          // IMPORTANT: use the midpoint between the two fingers
+          const mid = getTouchMidpoint(e);
+          touchPanStart.x = mid.x;
+          touchPanStart.y = mid.y;
+
           touchViewBoxStart.x = viewBox.x;
           touchViewBoxStart.y = viewBox.y;
           setStatus("Panning (two-finger drag)");
         }
       }, { passive: false });
 
-
       svg.addEventListener("touchmove", (e) => {
         if (!touchPanActive) return;
-        if (e.touches.length < 1) return;
+        if (e.touches.length !== 2) return;
+
         e.preventDefault();
 
         const rect = svg.getBoundingClientRect();
         const scaleX = viewBox.w / rect.width;
         const scaleY = viewBox.h / rect.height;
 
-        const t = e.touches[0];
-        const dx = (t.clientX - touchPanStart.x) * scaleX;
-        const dy = (t.clientY - touchPanStart.y) * scaleY;
+        // Again, use the midpoint for pan
+        const mid = getTouchMidpoint(e);
+        const dx = (mid.x - touchPanStart.x) * scaleX;
+        const dy = (mid.y - touchPanStart.y) * scaleY;
 
         viewBox.x = touchViewBoxStart.x - dx;
         viewBox.y = touchViewBoxStart.y - dy;
         updateViewBox();
       }, { passive: false });
 
-      svg.addEventListener("touchend", () => {
+      svg.addEventListener("touchend", (e) => {
         // When fingers are lifted, stop panning
-        if (touchPanActive) {
+        if (e.touches.length < 2 && touchPanActive) {
           touchPanActive = false;
           setStatus("Mode: pan / add nodes");
         }
       });
+
 
 
       // ----- Background: pan or tap-to-add node -----
@@ -1217,6 +1452,83 @@
         svg.addEventListener("pointermove", onBgPointerMove);
         svg.addEventListener("pointerup", onBgPointerUp, { once:true });
       });
+
+
+
+      let pinchLastDistance = null;
+
+      function getTouchDistance(e){
+        if (e.touches.length < 2) return null;
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        const dx = t1.clientX - t2.clientX;
+        const dy = t1.clientY - t2.clientY;
+        return Math.hypot(dx, dy);
+      }
+
+      function getTouchMidpoint(e){
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        return {
+          x: (t1.clientX + t2.clientX) / 2,
+          y: (t1.clientY + t2.clientY) / 2
+        };
+      }
+
+      svg.addEventListener("touchstart", (e)=>{
+        if (e.touches.length === 2){
+          pinchLastDistance = getTouchDistance(e);
+        }
+      }, { passive:true });
+
+      svg.addEventListener("touchmove", (e)=>{
+        if (e.touches.length === 2 && pinchLastDistance){
+          const d = getTouchDistance(e);
+          if (!d) return;
+
+          const factor = d / pinchLastDistance;
+          const mid = getTouchMidpoint(e);
+          applyZoomFactor(factor, mid.x, mid.y);
+          pinchLastDistance = d;
+
+          // prevent the browser default pinch-zoom
+          e.preventDefault();
+        }
+      }, { passive:false });
+
+      svg.addEventListener("touchend", (e)=>{
+        if (e.touches.length < 2){
+          pinchLastDistance = null;
+        }
+      });
+
+
+
+
+
+
+      svg.addEventListener("wheel", (e) => {
+        // Trackpad "two-finger drag" also comes in as wheel events.
+        // Prevent page scroll and use it for pan / zoom.
+        e.preventDefault();
+
+        const rect = svg.getBoundingClientRect();
+        const scaleX = viewBox.w / rect.width;
+        const scaleY = viewBox.h / rect.height;
+
+        // Hold Ctrl/⌘ to zoom, otherwise pan.
+        if (e.ctrlKey || e.metaKey) {
+          const factor = e.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP;
+          applyZoomFactor(factor, e.clientX, e.clientY);
+        } else {
+          // Pan based on wheel deltas (works nicely with trackpad two-finger scroll)
+          viewBox.x += e.deltaX * scaleX;
+          viewBox.y += e.deltaY * scaleY;
+          updateViewBox();
+          setStatus("Panning (trackpad)");
+        }
+      }, { passive: false });
+
 
       function onBgPointerMove(e){
         if (!bgTapCandidate || e.pointerId !== bgTapCandidate.pointerId) return;
@@ -1490,6 +1802,24 @@
         gateOff();
       });
 
+
+      zoomInBtn.addEventListener("click", () => {
+        applyZoomFactor(ZOOM_STEP);
+      });
+
+      zoomOutBtn.addEventListener("click", () => {
+        applyZoomFactor(1 / ZOOM_STEP);
+      });
+
+      zoomResetBtn.addEventListener("click", () => {
+        resetZoomTo100();
+      });
+
+      zoomFitBtn.addEventListener("click", () => {
+        zoomToFit();
+      });
+
+
       // Tool rail: Lines/Edit/Delete modes
       function syncToolButtons(){
         toolLines.classList.toggle("active",  linesMode);
@@ -1569,6 +1899,10 @@
       // ----- Gate & boot -----
       function gateOn(){ gate.style.display = "flex"; gateCover.style.display = "block"; }
       function gateOff(){ gate.style.display = "none"; gateCover.style.display = "none"; }
+
+
+
+
 
       async function refreshProjectList(){
         const items = await listProjects();
@@ -1685,17 +2019,33 @@
         gateOn();
         clearGraph();
         renderPalette();
+
         initViewBox();
+        updateZoomLabel();
+
         requestAnimationFrame(positionColorInput);
         setStatus("Mode: create/open a project");
 
         // keep viewBox size in sync with viewport
         window.addEventListener("resize", () => {
           const rect = svg.getBoundingClientRect();
-          viewBox.w = rect.width || viewBox.w;
-          viewBox.h = rect.height || viewBox.h;
+          const cx = viewBox.x + viewBox.w / 2;
+          const cy = viewBox.y + viewBox.h / 2;
+
+          const newW = rect.width  || viewBox.w;
+          const newH = rect.height || viewBox.h;
+
+          viewBox.w = newW;
+          viewBox.h = newH;
+          viewBox.x = cx - newW / 2;
+          viewBox.y = cy - newH / 2;
+
           updateViewBox();
+          positionColorInput();
         });
+
+
+
       }
 
       boot();
