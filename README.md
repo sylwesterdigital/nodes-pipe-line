@@ -1,71 +1,205 @@
-# nodes-pipe-line
-A Simple Pipeline for Using a Custom Nodes Editor
+# Nodes Pipeline / Node Canvas
 
-No build step, no external dependencies.
+Local-first node editor in a single HTML file.
 
-<img width="1441" height="1123" alt="Screenshot 2025-11-18 at 21 08 44" src="https://github.com/user-attachments/assets/232a9572-4dbd-4e8b-9fc5-9c81626c04e4" />
+This repo is an experiment in building a “wire APIs together like Lego” canvas from scratch, **without** React, canvas frameworks, or a backend. Everything lives in the browser: projects, history, and the SVG node graph itself.
 
+> Goal: a small, understandable codebase that can evolve into a visual workflow / API-orchestration tool.
+
+# Early Demo:
+https://github.com/user-attachments/assets/fb4c45d8-b233-4367-8bd7-2dd61e52857d
+
+
+---
+
+## What’s inside right now
+
+### Core concepts
+
+- **Projects (local-first)**
+  - Create / open / duplicate / delete projects.
+  - Metadata + palette stored in IndexedDB (`projects` store).
+  - Each project has its own graph state and history.
+
+- **Graph editor (SVG)**
+  - Click empty canvas to create a node.
+  - Drag nodes to move them; links follow.
+  - Connect nodes:
+    - Desktop: hover a node and press **`N`**, or use the node menu → **Start connection**.
+    - Touch: start connection and lift on the target node.
+  - Links are simple lines (`from` → `to`) with a per-link color.
+
+- **Node actions**
+  - **Rename** node (modal).
+  - **Description** per node (modal, free-form text).
+  - **Duplicate** node.
+  - **Delete** node.
+  - Context menu on desktop (right-click / long-press).
+
+- **History & persistence**
+  - Project snapshots stored in `states` store: `{ projectId, rev, state }`.
+  - Append-only action log in `history` store: `{ projectId, seq, action }`.
+  - Undo / redo stacks are rebuilt from the stored state/history.
+  - **Save** writes a new snapshot revision for the current project.
+
+- **Per-project color palette**
+  - 4 swatches + a `+` color picker.
+  - Palette stored per project; changing it updates metadata.
+  - Hovered node can be recolored from the palette.
+  - Palette picker is anchored visually but uses an off-screen `<input type="color">` for mobile friendliness.
+
+---
+
+## Desktop UX
+
+- **Canvas**
+  - Click empty space → create node (guarded so clicks near existing nodes don’t spawn clones).
+  - Drag node → moves it; links update.
+  - Status pill at bottom left shows node/link count and current mode.
+
+- **Keyboard shortcuts**
+  - **Undo**: `Ctrl/Cmd + Z`
+  - **Redo**: `Ctrl/Cmd + Y`
+  - **Save**: `Ctrl/Cmd + S`
+  - **Start link from hovered node**: `N`
+  - **Delete hovered node**: `X`
+  - **Duplicate hovered node**: `Shift + D`
+  - **Escape**:
+    - Close projects modal
+    - Close rename / description overlays
+    - Cancel linking
+    - Close context menu
+
+- **Node menu (context)**
+  - Right-click or long-press stationary node.
+  - Actions:
+    - Start connection
+    - Rename…
+    - Description…
+    - Duplicate
+    - Delete
+
+- **Top bar**
+  - `?` → toggle help sidebar.
+  - `Open…` → project list.
+  - `New…` → create project.
+  - `Duplicate…` → duplicate current project (with history/state).
+  - `Delete` → delete current project.
+
+---
+
+## Mobile UX
+
+The editor is designed to be usable on touch screens (no tiny hit-targets).
+
+- **Hamburger menu**
+  - `Hint` → show help sidebar.
+  - `Open` / `New` / `Duplicate` / `Delete` → project actions.
+  - `Save` → persist snapshot.
+
+- **Tool rail (left side)**
+  - **Lines mode**
+    - Tap first node → chain start.
+    - Tap second node → create link.
+    - Chain continues from the last tapped node.
+  - **Edit mode**
+    - Tap node → open node menu (same actions as desktop).
+  - **Delete mode**
+    - Tap node → delete.
+
+- **Node menu on touch**
+  - Long-press (or two-finger long-press) to open.
+  - Same actions as desktop.
+
+- **Mobile undo / redo / save**
+  - Floating buttons at bottom right:
+    - Undo
+    - Redo
+    - Save
+
+---
+
+## Storage model
+
+IndexedDB is used with three object stores:
+
+- **`projects`**
+  - `id` (PK, auto-increment)
+  - `name`
+  - `createdAt`, `updatedAt`
+  - `pointer` (current revision)
+  - `palette` (colors + selected index)
+
+- **`states`**
+  - Key: `[projectId, rev]`
+  - `state` → `{ nodes, links, nextId }`
+
+- **`history`**
+  - Key: `[projectId, seq]`
+  - `action` → e.g. `ADD_NODE`, `MOVE_NODE`, `CONNECT`, `RENAME_NODE`, `SET_DESCRIPTION`, `STYLE_NODE`, etc.
+
+This keeps the UI relatively dumb: UI operations produce actions; snapshots + actions are written to IndexedDB.
 
 ---
 
 ## How to run
 
-1. Save `index.html` to disk.
-2. Open it in any modern desktop browser (Chrome, Edge, Firefox, Safari).
+No build step, no backend. Just open in a modern browser.
 
-No server is required.
+```bash
+git clone git@github.com:sylwesterdigital/nodes-pipe-line.git
+cd nodes-pipe-line
 
----
+# Option 1: open directly
+# Open index.html in your browser (Chrome/Edge/Firefox)
 
-## Controls
+# Option 2 (recommended): serve via a tiny static server
+python -m http.server 8000
+# then go to http://localhost:8000 in the browser
+````
 
-### Create
-- **Left click** empty canvas: create node at cursor.
-
-### Move
-- **Left drag** a node: move; connected links follow.
-
-### Connect
-- **Right-click / two-finger tap / long-press** a node → **Start connection**.
-- Move cursor (yellow guide line follows).
-- **Left click** another node to connect.
-- **Esc** or **left click** empty canvas to cancel.
-
-### Context menu actions
-- **Rename…**: prompts for a new label.
-- **Duplicate**: creates an offset copy.
-- **Delete**: removes node and its links.
+> Note: IndexedDB is required. Use a modern desktop or mobile browser.
 
 ---
 
-## Implementation notes
+## Roadmap / next steps
 
-- SVG layers:
-  - `<g id="links-layer">` for permanent link lines (with subtle shadow).
-  - `<g id="nodes-layer">` for node groups (`<g>` with `<circle>` and `<text>`).
-- Temporary linking uses `<line id="temp-link">` shown only during connect mode.
-- Transform jitter on hover is avoided with `transform-box: fill-box; transform-origin: center;`.
-- Context menu is a positioned `<div id="menu">`; shown only when not linking.
+Short-term ideas for this repo:
+
+* **Infinite canvas + panning**
+
+  * Pan the graph with trackpad / mouse drag / two-finger touch.
+  * Nodes stay at logical coordinates; viewBox handles movement/zoom.
+
+* **Node types**
+
+  * Visual grouping into:
+
+    * Source (e.g. HTTP / Webhook / scraper)
+    * Transform (e.g. LLM, mapping, filters)
+    * Action (e.g. send email, push to API)
+
+* **Execution engine**
+
+  * Simple runner that:
+
+    * Walks the graph from entry nodes.
+    * Executes node functions in order.
+    * Logs per-node outputs in a console panel.
+
+* **Real integrations**
+
+  * HTTP request node (configurable method / URL / body).
+  * LLM transform node (prompt + input template).
+  * Basic validation of links (no impossible cycles for simple flows).
+
+* **Import / export**
+
+  * JSON export of a project (nodes + links + palette + history).
+  * Import into another browser / device.
 
 ---
 
-## Extending
+## Status
 
-- Persist graph: serialize `nodes` and `links` arrays to `localStorage` or a backend.
-- Add ports: render smaller anchor circles and snap links to port positions.
-- Directed edges / labels: replace `<line>` with `<path>` and add markers/text.
-- Selection / multi-move: track selected node IDs and apply drag offsets in batch.
-- Touch gestures: add pointer events for full pen/touch support.
-
----
-
-## Browser support
-
-Designed for current versions of Chromium, Firefox, and Safari.  
-Requires standard DOM, SVG, and `addEventListener`.
-
----
-
-## License
-
-MIT
+This is still a **UI + persistence playground**, not a finished workflow engine.
