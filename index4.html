@@ -463,9 +463,9 @@
 
     <div id="menu">
       <button data-action="connect">Start connection</button>
-      <button data-action="rename">Rename</button>
-      <button data-action="description">Description</button> 
-      <button data-action="duplicate">Clone</button>
+      <button data-action="rename">Rename…</button>
+      <button data-action="description">Description…</button> 
+      <button data-action="duplicate">Duplicate</button>
       <hr>
       <button class="danger" data-action="delete">Delete</button>
     </div>
@@ -477,7 +477,7 @@
       <span class="sep">|</span>
       <button id="btn-switch" class="btn">Open…</button>
       <button id="btn-new" class="btn">New…</button>
-      <button id="btn-dup" class="btn">Clone</button>
+      <button id="btn-dup" class="btn">Duplicate…</button>
       <button id="btn-del" class="btn danger">Delete</button>
     </div>
 
@@ -590,7 +590,7 @@
       const toolEdit  = document.getElementById("tool-edit");
       const toolDelete= document.getElementById("tool-delete");
 
-      let projectListItems = [];
+
 
 
 
@@ -842,20 +842,6 @@
 
       // ----- Utils -----
 
-
-      async function duplicateCurrentProject(newName){
-        try {
-          await persistSnapshot();
-          const dup = await duplicateProject(currentProject.id, newName);
-          await refreshProjectList();
-          await openProject(dup);
-          setStatus(`Duplicated as "${dup.name}"`);
-        } catch (err) {
-          console.error("Duplicate from hamburger failed", err);
-          setStatus("Duplicate failed (name exists?)");
-        }
-      }      
-
       function isTextEditingTarget(e){
         const el = e.target;
         if (!el) return false;
@@ -1090,106 +1076,36 @@
         await saveHistoryRecord(id, 1, { type:"INIT", at: now });
         return { id, ...meta };
       }
-
-
-
       async function duplicateProject(sourceId, newName){
         const now = Date.now();
-
-        // 1) Read original project meta in its own transaction
-        const origin = await new Promise((res, rej) => {
-          const t = tx(["projects"]); // readonly is fine
+        const t = tx(["projects"],"readwrite");
+        const origin = await new Promise((res,rej)=>{
           const r = t.objectStore("projects").get(sourceId);
-          r.onsuccess = () => res(r.result);
-          r.onerror   = () => rej(r.error);
+          r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);
         });
+        const addReq = t.objectStore("projects").add({ name:newName, createdAt: now, updatedAt: now, pointer: 0, palette: origin?.palette || palette });
+        const newId = await new Promise((res,rej)=>{ addReq.onsuccess=()=>res(addReq.result); addReq.onerror=()=>rej(addReq.error); });
 
-        const meta = {
-          name: newName,
-          createdAt: now,
-          updatedAt: now,
-          pointer: 0,
-          palette: origin?.palette || palette
-        };
-
-        // 2) Create new project record in a fresh readwrite transaction
-        const newId = await new Promise((res, rej) => {
-          const t = tx(["projects"], "readwrite");
-          const addReq = t.objectStore("projects").add(meta);
-          addReq.onsuccess = () => res(addReq.result);
-          addReq.onerror   = () => rej(addReq.error);
-        });
-
-        // 3) Copy all states
         let maxRev = 0;
-        await new Promise((res, rej) => {
-          const t2  = tx(["states"], "readwrite");
-          const idx = t2.objectStore("states").index("by_project")
-          .openCursor(IDBKeyRange.only(sourceId));
-
-          idx.onsuccess = (e) => {
-            const c = e.target.result;
-            if (c) {
-              const { rev, state } = c.value;
-              maxRev = Math.max(maxRev, rev);
-              t2.objectStore("states").put({
-                projectId: newId,
-                rev,
-                state: JSON.parse(JSON.stringify(state))
-              });
-              c.continue();
-            } else {
-              res();
-            }
-          };
-          idx.onerror = () => rej(idx.error);
+        await new Promise((res,rej)=>{
+          const t2 = tx(["states"],"readwrite");
+          const idx = t2.objectStore("states").index("by_project").openCursor(IDBKeyRange.only(sourceId));
+          idx.onsuccess=(e)=>{ const c=e.target.result; if(c){ const {rev,state}=c.value; maxRev=Math.max(maxRev,rev); t2.objectStore("states").put({projectId:newId,rev,state:JSON.parse(JSON.stringify(state))}); c.continue(); } else res(); };
+          idx.onerror=()=>rej(idx.error);
         });
-
-        // 4) Copy history
-        await new Promise((res, rej) => {
-          const t3  = tx(["history"], "readwrite");
-          const idx = t3.objectStore("history").index("by_project")
-          .openCursor(IDBKeyRange.only(sourceId));
-
-          idx.onsuccess = (e) => {
-            const c = e.target.result;
-            if (c) {
-              const { seq, action } = c.value;
-              t3.objectStore("history").put({
-                projectId: newId,
-                seq,
-                action: JSON.parse(JSON.stringify(action))
-              });
-              c.continue();
-            } else {
-              res();
-            }
-          };
-          idx.onerror = () => rej(idx.error);
+        await new Promise((res,rej)=>{
+          const t3 = tx(["history"],"readwrite");
+          const idx = t3.objectStore("history").index("by_project").openCursor(IDBKeyRange.only(sourceId));
+          idx.onsuccess=(e)=>{ const c=e.target.result; if(c){ const {seq,action}=c.value; t3.objectStore("history").put({projectId:newId,seq,action:JSON.parse(JSON.stringify(action))}); c.continue(); } else res(); };
+          idx.onerror=()=>rej(idx.error);
         });
-
-        // 5) Finalize new project meta with correct pointer
-        const finalMeta = {
-          id: newId,
-          name: newName,
-          createdAt: now,
-          updatedAt: now,
-          pointer: maxRev,
-          palette: origin?.palette || palette
-        };
-
-        await new Promise((res, rej) => {
-          const t4    = tx(["projects"], "readwrite");
-          const putReq = t4.objectStore("projects").put(finalMeta);
-          putReq.onsuccess = () => res();
-          putReq.onerror   = () => rej(putReq.error);
+        await new Promise((res,rej)=>{
+          const t4 = tx(["projects"],"readwrite");
+          const putReq = t4.objectStore("projects").put({ id:newId, name:newName, createdAt: now, updatedAt: now, pointer: maxRev, palette: origin?.palette || palette });
+          putReq.onsuccess=()=>res(); putReq.onerror=()=>rej(putReq.error);
         });
-
-        return finalMeta;
+        return { id:newId, name:newName, createdAt: now, updatedAt: now, pointer: maxRev, palette: origin?.palette || palette };
       }
-
-
-
       async function updateProjectMeta(patch){
         if (!currentProject) return;
         const now = Date.now();
@@ -2064,92 +1980,41 @@
       hamburger.addEventListener("click", ()=>{
         hambMenu.style.display = (hambMenu.style.display==="block") ? "none" : "block";
       });
-
-
       document.addEventListener("pointerdown", (e)=>{
-        const target = e.target;
-
-        // Close hamburger menu when clicking outside
-        if (!hambMenu.contains(target) && target !== hamburger){
+        if (!hambMenu.contains(e.target) && e.target !== hamburger){
           hambMenu.style.display = "none";
         }
-
-        // Close hint/sidebar when clicking outside it
-        if (sidebarOpen && !sidebar.contains(target) && target !== btnHelp){
-          sidebarOpen = false;
-          sidebar.style.display = "none";
-        }
       });
 
-
-
-      hambMenu.addEventListener("click", (e)=>{
-        const b = e.target.closest("button");
-        if (!b) return;
-
+      hambMenu.addEventListener("click", async (e)=>{
+        const b = e.target.closest("button"); if (!b) return;
         const act = b.getAttribute("data-mobile");
-
-        if (act === "open") {
-          btnSwitch.click();
-        } else if (act === "new") {
-          btnNew.click();
-        } else if (act === "dup") {
-          btnDup.click();
-        } else if (act === "del") {
-          btnDel.click();
-        } else if (act === "save") {
-          btnSave.click();
-        } else if (act === "hint") {
-          btnHelp.click();
+        if (act==="open"){ await refreshProjectList(); gateOn(); setStatus("Open project"); }
+        if (act==="new"){
+          const name = prompt("New project name:"); if (!name || !name.trim()) return;
+          try{ const p = await createProject(name.trim()); await refreshProjectList(); await openProject(p); }
+          catch(err){ setStatus("Create failed (name exists?)"); }
         }
-
+        if (act==="dup"){
+          if (!currentProject){ setStatus("No project to duplicate"); return; }
+          await persistSnapshot();
+          const name = prompt(`Duplicate "${currentProject.name}" as:`); if (!name || !name.trim()) return;
+          try{ const dup = await duplicateProject(currentProject.id, name.trim()); await refreshProjectList(); await openProject(dup); setStatus(`Duplicated as "${dup.name}"`); }
+          catch(err){ setStatus("Duplicate failed (name exists?)"); }
+        }
+        if (act==="del"){
+          if (!currentProject) return;
+          const ok = confirm(`Delete project "${currentProject.name}"? This cannot be undone.`); if (!ok) return;
+          await deleteProject(currentProject.id); await refreshProjectList(); gateOn();
+        }
+        if (act==="save"){
+          await persistSnapshot();
+        }
+        if (act==="hint"){
+          sidebarOpen = true; sidebar.style.display = "flex";
+        }
         hambMenu.style.display = "none";
       });
-
-
-
-      // hambMenu.addEventListener("click", async (e)=>{
-      //   const b = e.target.closest("button"); if (!b) return;
-      //   const act = b.getAttribute("data-mobile");
-      //   if (act==="open"){ await refreshProjectList(); gateOn(); setStatus("Open project"); }
-      //   if (act==="new"){
-      //     const name = prompt("New project name:"); if (!name || !name.trim()) return;
-      //     try{ const p = await createProject(name.trim()); await refreshProjectList(); await openProject(p); }
-      //     catch(err){ setStatus("Create failed (name exists?)"); }
-      //   }
-
-      //   if (act === "dup") {
-      //     if (!currentProject) {
-      //       setStatus("No project to duplicate");
-      //       return;
-      //     }
-
-      //     const defaultName = `${currentProject.name} (copy)`;
-      //     const name = prompt(`Duplicate "${currentProject.name}" as:`, defaultName);
-      //     if (!name || !name.trim()) return;
-
-      //     // Run the actual async work outside the sync click handler
-      //     duplicateCurrentProject(name.trim());
-      //   }
-
-
-      //   if (act==="del"){
-      //     if (!currentProject) return;
-      //     const ok = confirm(`Delete project "${currentProject.name}"? This cannot be undone.`); if (!ok) return;
-      //     await deleteProject(currentProject.id); await refreshProjectList(); gateOn();
-      //   }
-      //   if (act==="save"){
-      //     await persistSnapshot();
-      //   }
-
-      //   if (act==="hint"){
-      //     sidebarOpen = !sidebarOpen;
-      //     sidebar.style.display = sidebarOpen ? "flex" : "none";
-      //   }
-
-
-      //   hambMenu.style.display = "none";
-      // });
 
       projectClose.addEventListener("click", () => {
         gateOff();
@@ -2256,25 +2121,21 @@
 
       async function refreshProjectList(){
         const items = await listProjects();
-        projectListItems = items;   // cache for the delegated handler
-
         listEl.innerHTML = "";
-
-        if (items.length === 0){
+        if (items.length===0){
           const d = document.createElement("div");
-          d.className = "proj-row";
+          d.className="proj-row";
           d.innerHTML = `<span class="proj-meta">No projects yet.</span>`;
           listEl.appendChild(d);
           return;
         }
-
         items.forEach(p=>{
           const row = document.createElement("div");
-          row.className = "proj-row";
+          row.className="proj-row";
           row.innerHTML = `
             <div>
               <div class="proj-name">${p.name}</div>
-              <div class="proj-meta">Updated: ${new Date(p.updatedAt || p.createdAt).toLocaleString()}</div>
+              <div class="proj-meta">Updated: ${new Date(p.updatedAt||p.createdAt).toLocaleString()}</div>
             </div>
             <div class="row-actions">
               <button class="btn primary" data-open="${p.id}">Open</button>
@@ -2283,139 +2144,24 @@
           </div>`;
           listEl.appendChild(row);
         });
-      }
-
-      listEl.addEventListener("click", async (e) => {
-        const btn = e.target.closest("button[data-open],button[data-dup],button[data-del]");
-        if (!btn) return;
-
-        const id   = Number(btn.dataset.open || btn.dataset.dup || btn.dataset.del);
-        const proj = projectListItems.find(x => x.id === id);
-        if (!proj) return;
-
-        // Open
-        if (btn.dataset.open !== undefined) {
-          await openProject(proj);
-          return;
-        }
-
-        // Duplicate
-        if (btn.dataset.dup !== undefined) {
-          const name = prompt(
-        `Name for the duplicate of "${proj.name}":`,
-      `${proj.name} (copy)`
-      );
+        listEl.querySelectorAll("[data-open]").forEach(b=> b.addEventListener("click", async (e)=>{
+          const id = Number(e.currentTarget.getAttribute("data-open"));
+          const all = await listProjects();
+          const match = all.find(x=>x.id===id);
+          if (!match) return; await openProject(match);
+        }));
+        listEl.querySelectorAll("[data-dup]").forEach(b=> b.addEventListener("click", async (e)=>{
+          const id = Number(e.currentTarget.getAttribute("data-dup"));
+          const name = prompt("Name for the duplicate:");
           if (!name || !name.trim()) return;
-
-          try {
-            const dup = await duplicateProject(proj.id, name.trim());
-            await refreshProjectList();
-            await openProject(dup);
-            setStatus(`Duplicated as "${dup.name}"`);
-          } catch (err) {
-            console.error("Duplicate from project list failed", err);
-            setStatus("Duplicate failed (name exists?)");
-          }
-          return;
-        }
-
-        // Delete
-        if (btn.dataset.del !== undefined) {
-          const ok = confirm(
-        `Delete project "${proj.name}"?\n\nThis cannot be undone.\n\nSure / No`
-        );
-          if (!ok) return;
-
-          await deleteProject(proj.id);
-          await refreshProjectList();
-          setStatus(`Project "${proj.name}" deleted`);
-          return;
-        }
-      });
-
-
-
-
-      // async function refreshProjectList(){
-      //   const items = await listProjects();
-      //   listEl.innerHTML = "";
-      //   if (items.length===0){
-      //     const d = document.createElement("div");
-      //     d.className="proj-row";
-      //     d.innerHTML = `<span class="proj-meta">No projects yet.</span>`;
-      //     listEl.appendChild(d);
-      //     return;
-      //   }
-      //   items.forEach(p=>{
-      //     const row = document.createElement("div");
-      //     row.className="proj-row";
-      //     row.innerHTML = `
-      //       <div>
-      //         <div class="proj-name">${p.name}</div>
-      //         <div class="proj-meta">Updated: ${new Date(p.updatedAt||p.createdAt).toLocaleString()}</div>
-      //       </div>
-      //       <div class="row-actions">
-      //         <button class="btn primary" data-open="${p.id}">Open</button>
-      //         <button class="btn" data-dup="${p.id}">Duplicate…</button>
-      //         <button class="btn danger" data-del="${p.id}">Delete</button>
-      //     </div>`;
-      //     listEl.appendChild(row);
-      //   });
-      //   listEl.querySelectorAll("[data-open]").forEach(b=> b.addEventListener("click", async (e)=>{
-      //     const id = Number(e.currentTarget.getAttribute("data-open"));
-      //     const all = await listProjects();
-      //     const match = all.find(x=>x.id===id);
-      //     if (!match) return; await openProject(match);
-      //   }));
-
-
-      //   listEl.querySelectorAll("[data-dup]").forEach(b =>
-      //     b.addEventListener("click", async (e) => {
-      //       const id = Number(e.currentTarget.getAttribute("data-dup"));
-      //       const proj = items.find(x => x.id === id);
-      //       if (!proj) return;
-
-      //       // Default duplicate name, e.g. "My map (copy)"
-      //       const name = prompt(
-      //     `Name for the duplicate of "${proj.name}":`,
-      //   `${proj.name} (copy)`
-      //   );
-      //       if (!name || !name.trim()) return;
-
-      //       try {
-      //         const dup = await duplicateProject(id, name.trim());
-      //         await refreshProjectList();
-      //         await openProject(dup);
-      //         setStatus(`Duplicated as "${dup.name}"`);
-      //       } catch (err) {
-      //         console.error("Duplicate from project list failed", err);
-      //         setStatus("Duplicate failed (name exists?)");
-      //       }
-      //     })
-      //     );
-
-
-
-      //   listEl.querySelectorAll("[data-del]").forEach(b =>
-      //     b.addEventListener("click", async (e) => {
-      //       const id = Number(e.currentTarget.getAttribute("data-del"));
-      //       const proj = items.find(x => x.id === id);
-      //       if (!proj) return;
-
-      //       const ok = confirm(
-      //     `Delete project "${proj.name}"?\n\nThis cannot be undone.\n\nSure / No`
-      //     );
-      //       if (!ok) return;
-
-      //       await deleteProject(id);
-      //       await refreshProjectList();
-      //       setStatus(`Project "${proj.name}" deleted`);
-      //     })
-      //     );
-
-
-
-      // }
+          try{ const dup = await duplicateProject(id, name.trim()); await refreshProjectList(); await openProject(dup); setStatus(`Duplicated as "${dup.name}"`); }
+          catch(err){ setStatus("Duplicate failed (name exists?)"); }
+        }));
+        listEl.querySelectorAll("[data-del]").forEach(b=> b.addEventListener("click", async (e)=>{
+          const id = Number(e.currentTarget.getAttribute("data-del"));
+          await deleteProject(id); await refreshProjectList();
+        }));
+      }
 
       async function deleteProject(id){
         await new Promise((res,rej)=>{

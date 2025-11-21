@@ -132,255 +132,254 @@
     .swatch.picker { display:grid; place-items:center; font-size:18px; width:32px; height:32px; border-radius:8px; }
     .swatch.picker span { pointer-events:none; }
 
-/* Invisible color-input exactly on top of the ＋ swatch */
-#palette-color-input {
-  position: fixed;
-  left: 0;
-  top: 0;
-  width: 32px;
-  height: 32px;
-  opacity: 0;          /* invisible but still hit-testable */
-  border: none;
-  padding: 0;
-  margin: 0;
-  background: transparent;
-  z-index: 100;        /* above the palette */
-}
+    /* Invisible color-input overlay anchored to ＋ swatch */
+    /* keep color input off-screen, no hit area to zoom to */
+    #palette-color-input {
+      position:fixed;
+      left:-9999px;
+      top:auto;
+      width:1px;
+      height:1px;
+      opacity:0;
+      border:none;
+      padding:0;
+      margin:0;
+      background:transparent;
+    }
 
+    .disabled-cover { position:absolute; inset:0; pointer-events:auto; }
 
-.disabled-cover { position:absolute; inset:0; pointer-events:auto; }
+    /* Project gate modal */
+    #project-gate{
+      position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+      background:rgba(0,0,0,.6); z-index:50;
+    }
+    #project-card{
+      width:min(620px,92vw); background:var(--panel); border:1px solid var(--muted-2);
+      border-radius:14px; box-shadow:0 20px 60px var(--shadow); padding:16px; display:flex; flex-direction:column; gap:10px;
+    }
+    #project-card h2{ font-size:18px; margin-bottom:6px; }
+    #projects-list{ max-height:260px; overflow:auto; border:1px solid var(--muted-2); border-radius:10px; padding:4px; background:var(--bg); }
+    .proj-row{ display:flex; align-items:center; justify-content:space-between; padding:10px; border-radius:8px; gap:10px; }
+    .proj-row:hover{ background:#222536; }
+    .proj-name{ font-size:16px; }
+    .proj-meta{ font-size:12px; opacity:.8; }
+    .row-actions{ display:flex; gap:8px; }
+    #project-form{ display:flex; gap:8px; margin-top:8px; }
+    #project-name{
+      flex:1; padding:10px 12px; border-radius:8px; border:1px solid var(--muted-2);
+      background:#0f1222; color:#e5e7eb; font-size:16px;
+    }
 
-/* Project gate modal */
-#project-gate{
-  position:absolute; inset:0; display:none; align-items:center; justify-content:center;
-  background:rgba(0,0,0,.6); z-index:50;
-}
-#project-card{
-  width:min(620px,92vw); background:var(--panel); border:1px solid var(--muted-2);
-  border-radius:14px; box-shadow:0 20px 60px var(--shadow); padding:16px; display:flex; flex-direction:column; gap:10px;
-}
-#project-card h2{ font-size:18px; margin-bottom:6px; }
-#projects-list{ max-height:260px; overflow:auto; border:1px solid var(--muted-2); border-radius:10px; padding:4px; background:var(--bg); }
-.proj-row{ display:flex; align-items:center; justify-content:space-between; padding:10px; border-radius:8px; gap:10px; }
-.proj-row:hover{ background:#222536; }
-.proj-name{ font-size:16px; }
-.proj-meta{ font-size:12px; opacity:.8; }
-.row-actions{ display:flex; gap:8px; }
-#project-form{ display:flex; gap:8px; margin-top:8px; }
-#project-name{
-  flex:1; padding:10px 12px; border-radius:8px; border:1px solid var(--muted-2);
-  background:#0f1222; color:#e5e7eb; font-size:16px;
-}
+    .project-card-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+    }
 
-.project-card-header{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:8px;
-}
+    .project-close-btn{
+      min-width:auto;
+      padding:4px 10px;
+      line-height:1;
+      font-size:16px;
+    }
 
-.project-close-btn{
-  min-width:auto;
-  padding:4px 10px;
-  line-height:1;
-  font-size:16px;
-}
+    /* --- Mobile UI additions (exact placement: appended at end of <style>) --- */
+    #hamburger{position:absolute;right:12px;top:12px;z-index:40;background:var(--pill);border:1px solid var(--pill-b);border-radius:10px;width:44px;height:44px;display:grid;place-items:center}
+    #hamburger span{font-size:20px;line-height:1}
+    #hamburger-menu{position:absolute;right:12px;top:60px;z-index:41;background:#0f172a;border:1px solid #334155;border-radius:12px;box-shadow:0 12px 30px var(--shadow);display:none;min-width:200px;overflow:hidden}
+    #hamburger-menu button{width:100%;padding:12px 14px;background:transparent;border:0;color:var(--text);text-align:left;font-size:16px}
+    #hamburger-menu button:hover{background:#1f2937}
 
-/* --- Mobile UI additions (exact placement: appended at end of <style>) --- */
-#hamburger{position:absolute;right:12px;top:12px;z-index:40;background:var(--pill);border:1px solid var(--pill-b);border-radius:10px;width:44px;height:44px;display:grid;place-items:center}
-#hamburger span{font-size:20px;line-height:1}
-#hamburger-menu{position:absolute;right:12px;top:60px;z-index:41;background:#0f172a;border:1px solid #334155;border-radius:12px;box-shadow:0 12px 30px var(--shadow);display:none;min-width:200px;overflow:hidden}
-#hamburger-menu button{width:100%;padding:12px 14px;background:transparent;border:0;color:var(--text);text-align:left;font-size:16px}
-#hamburger-menu button:hover{background:#1f2937}
+    #mobile-undo-redo{
+      position:absolute;
+      right:12px;
+      bottom:72px;
+      z-index:40;
+      display:flex;
+      gap:8px;
+      background:var(--pill);
+      padding:6px;
+    }
 
-#mobile-undo-redo{
-  position:absolute;
-  right:12px;
-  bottom:72px;
-  z-index:40;
-  display:flex;
-  gap:8px;
-  background:var(--pill);
-  padding:6px;
-}
+    @media(min-width:768px){
+      #hamburger,
+      #hamburger-menu{
+        display:none;
+      }
+    }
 
-@media(min-width:768px){
-  #hamburger,
-  #hamburger-menu{
-    display:none;
-  }
-}
+    #tool-rail{
+      position:absolute;
+      left:12px;
+      top:68px;
+      bottom:12px;
+      width:56px;
+      z-index:38;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      pointer-events:none;
+    }
 
-#tool-rail{
-  position:absolute;
-  left:12px;
-  top:68px;
-  bottom:12px;
-  width:56px;
-  z-index:38;
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  pointer-events:none;
-}
+    #tool-rail .tool{
+      pointer-events:auto; 
+    }
 
-#tool-rail .tool{
-  pointer-events:auto; 
-}
+    .tool{
+      flex:0 0 auto;
+      display:grid;
+      place-items:center;
+      height:44px;
+      border-radius:10px;
+      border:1px solid var(--muted-2);
+      background:var(--muted);
+      font-size:12px;
+      color:#ffffff;            
+    }
+    .tool.active{outline:2px solid #fff;outline-offset:2px}
+    .tool .lbl{
+      pointer-events:none;
+      font-size:11px;
+      color:#ffffff;             
+    }
 
-.tool{
-  flex:0 0 auto;
-  display:grid;
-  place-items:center;
-  height:44px;
-  border-radius:10px;
-  border:1px solid var(--muted-2);
-  background:var(--muted);
-  font-size:12px;
-  color:#ffffff;            
-}
-.tool.active{outline:2px solid #fff;outline-offset:2px}
-.tool .lbl{
-  pointer-events:none;
-  font-size:11px;
-  color:#ffffff;             
-}
+    /* Node description overlay */
+    #desc-overlay{
+      position:absolute;
+      inset:0;
+      display:none;              /* flex when active */
+      align-items:center;
+      justify-content:center;
+      background:rgba(0,0,0,.65);
+      z-index:70;
+      padding:16px;
+    }
 
-/* Node description overlay */
-#desc-overlay{
-  position:absolute;
-  inset:0;
-  display:none;              /* flex when active */
-  align-items:center;
-  justify-content:center;
-  background:rgba(0,0,0,.65);
-  z-index:70;
-  padding:16px;
-}
+    #desc-card{
+      width:min(640px, 96vw);
+      max-height:80vh;
+      background:var(--panel);
+      border:1px solid var(--muted-2);
+      border-radius:14px;
+      box-shadow:0 24px 80px var(--shadow);
+      padding:16px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      overflow:auto;
+    }
 
-#desc-card{
-  width:min(640px, 96vw);
-  max-height:80vh;
-  background:var(--panel);
-  border:1px solid var(--muted-2);
-  border-radius:14px;
-  box-shadow:0 24px 80px var(--shadow);
-  padding:16px;
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  overflow:auto;
-}
+    #desc-card h2{
+      font-size:18px;
+    }
 
-#desc-card h2{
-  font-size:18px;
-}
+    #desc-node-label{
+      font-size:16px;
+      opacity:.8;
+    }
 
-#desc-node-label{
-  font-size:16px;
-  opacity:.8;
-}
+    #desc-text{
+      width:100%;
+      min-height:120px;
+      max-height:40vh;
+      resize:vertical;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid var(--muted-2);
+      background:#020617;
+      color:var(--text);
+      font-size:16px;
+      line-height:1.4;
+    }
 
-#desc-text{
-  width:100%;
-  min-height:120px;
-  max-height:40vh;
-  resize:vertical;
-  padding:10px 12px;
-  border-radius:10px;
-  border:1px solid var(--muted-2);
-  background:#020617;
-  color:var(--text);
-  font-size:16px;
-  line-height:1.4;
-}
+    .desc-actions{
+      display:flex;
+      justify-content:flex-end;
+      gap:8px;
+      margin-top:4px;
+    }
 
-.desc-actions{
-  display:flex;
-  justify-content:flex-end;
-  gap:8px;
-  margin-top:4px;
-}
+    /* Rename node overlay */
+    #rename-overlay{
+      position:absolute;
+      inset:0;
+      display:none;              /* flex when active */
+      align-items:center;
+      justify-content:center;
+      background:rgba(0,0,0,.65);
+      z-index:71;
+      padding:16px;
+    }
 
-/* Rename node overlay */
-#rename-overlay{
-  position:absolute;
-  inset:0;
-  display:none;              /* flex when active */
-  align-items:center;
-  justify-content:center;
-  background:rgba(0,0,0,.65);
-  z-index:71;
-  padding:16px;
-}
+    #rename-card{
+      width:min(480px, 90vw);
+      background:var(--panel);
+      border:1px solid var(--muted-2);
+      border-radius:14px;
+      box-shadow:0 24px 80px var(--shadow);
+      padding:16px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
 
-#rename-card{
-  width:min(480px, 90vw);
-  background:var(--panel);
-  border:1px solid var(--muted-2);
-  border-radius:14px;
-  box-shadow:0 24px 80px var(--shadow);
-  padding:16px;
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
+    #rename-card h2{
+      font-size:18px;
+    }
 
-#rename-card h2{
-  font-size:18px;
-}
+    #rename-input{
+      width:100%;
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid var(--muted-2);
+      background:#020617;
+      color:var(--text);
+      font-size:16px;
+    }
 
-#rename-input{
-  width:100%;
-  padding:10px 12px;
-  border-radius:10px;
-  border:1px solid var(--muted-2);
-  background:#020617;
-  color:var(--text);
-  font-size:16px;
-}
+    @media (max-width: 767px) {
+      #topbar { display:none; }
+    }
 
-@media (max-width: 767px) {
-  #topbar { display:none; }
-}
+    #zoom-controls{
+      position:absolute;
+      left:12px;
+      bottom: 12px;
+      z-index:40;
+      display:flex;
+      flex-direction:column;   /* stack vertically */
+      gap:8px;
+      align-items:center;      /* keep them narrow */
+      background:var(--pill);
+      font-size:14px;
+    }
 
-#zoom-controls{
-  position:absolute;
-  left:12px;
-  bottom: 12px;
-  z-index:40;
-  display:flex;
-  flex-direction:column;   /* stack vertically */
-  gap:8px;
-  align-items:center;      /* keep them narrow */
-  background:var(--pill);
-  font-size:14px;
-}
+    /* make the zoom buttons compact */
+    #zoom-controls .btn{
+      min-width:40px;          /* narrow buttons */
+      padding:6px 10px;        /* smaller padding */
+    }
 
-/* make the zoom buttons compact */
-#zoom-controls .btn{
-  min-width:40px;          /* narrow buttons */
-  padding:6px 10px;        /* smaller padding */
-}
+    #zoom-reset {
+      font-size: 12px;
+    }
 
-#zoom-reset {
-  font-size: 12px;
-}
-
-/* zoom label spacing & size */
-#zoom-controls #zoom-label{
-  min-width:auto;
-  margin:2px 0;
-  font-size:13px;
-  text-align:center;
-}
-
-
+    /* zoom label spacing & size */
+    #zoom-controls #zoom-label{
+      min-width:auto;
+      margin:2px 0;
+      font-size:13px;
+      text-align:center;
+    }
 
 
 
 
-</style>
+
+
+  </style>
 </head>
 <body>
   <aside id="sidebar">
@@ -439,7 +438,6 @@
     <svg id="canvas">
       <g id="links-layer"></g>
       <line id="temp-link" x1="0" y1="0" x2="0" y2="0"></line>
-
       <!-- little marker when hovering / snapping over a line -->
       <circle id="hover-dot"
       r="4"
@@ -447,25 +445,14 @@
       stroke="#000000"
       stroke-width="1"
       style="display:none; pointer-events:none;"></circle>
-
-      <!-- debug circle showing the midpoint of a multi-touch gesture -->
-      <circle id="pinch-center"
-      r="12"
-      fill="none"
-      stroke="#22c55e"
-      stroke-width="2"
-      style="display:none; pointer-events:none;"></circle>
-
-
       <g id="nodes-layer"></g>
     </svg>
 
-
     <div id="menu">
       <button data-action="connect">Start connection</button>
-      <button data-action="rename">Rename</button>
-      <button data-action="description">Description</button> 
-      <button data-action="duplicate">Clone</button>
+      <button data-action="rename">Rename…</button>
+      <button data-action="description">Description…</button> 
+      <button data-action="duplicate">Duplicate</button>
       <hr>
       <button class="danger" data-action="delete">Delete</button>
     </div>
@@ -477,7 +464,7 @@
       <span class="sep">|</span>
       <button id="btn-switch" class="btn">Open…</button>
       <button id="btn-new" class="btn">New…</button>
-      <button id="btn-dup" class="btn">Clone</button>
+      <button id="btn-dup" class="btn">Duplicate…</button>
       <button id="btn-del" class="btn danger">Delete</button>
     </div>
 
@@ -590,7 +577,7 @@
       const toolEdit  = document.getElementById("tool-edit");
       const toolDelete= document.getElementById("tool-delete");
 
-      let projectListItems = [];
+
 
 
 
@@ -637,7 +624,6 @@
       let deleteMode= false;   // tap deletes node
       let chainFrom = null;    // last node tapped in linesMode
       let tapMoved  = false;   // tracks movement to distinguish drag vs tap
-      let touchPanActive = false;
 
       // ----- Canvas view (endless pan via viewBox) -----
       const viewBox = { x: 0, y: 0, w: 0, h: 0 };
@@ -689,15 +675,6 @@
         updateZoomLabel();
         setStatus("Zoom: 100%");
       }
-
-      function screenToSvg(clientX, clientY){
-        const pt = svg.createSVGPoint();
-        pt.x = clientX;
-        pt.y = clientY;
-        return pt.matrixTransform(svg.getScreenCTM().inverse());
-      }
-
-
 
       function getNodesBounds(){
         if (!nodes.length) return null;
@@ -841,20 +818,6 @@
 
 
       // ----- Utils -----
-
-
-      async function duplicateCurrentProject(newName){
-        try {
-          await persistSnapshot();
-          const dup = await duplicateProject(currentProject.id, newName);
-          await refreshProjectList();
-          await openProject(dup);
-          setStatus(`Duplicated as "${dup.name}"`);
-        } catch (err) {
-          console.error("Duplicate from hamburger failed", err);
-          setStatus("Duplicate failed (name exists?)");
-        }
-      }      
 
       function isTextEditingTarget(e){
         const el = e.target;
@@ -1090,106 +1053,36 @@
         await saveHistoryRecord(id, 1, { type:"INIT", at: now });
         return { id, ...meta };
       }
-
-
-
       async function duplicateProject(sourceId, newName){
         const now = Date.now();
-
-        // 1) Read original project meta in its own transaction
-        const origin = await new Promise((res, rej) => {
-          const t = tx(["projects"]); // readonly is fine
+        const t = tx(["projects"],"readwrite");
+        const origin = await new Promise((res,rej)=>{
           const r = t.objectStore("projects").get(sourceId);
-          r.onsuccess = () => res(r.result);
-          r.onerror   = () => rej(r.error);
+          r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);
         });
+        const addReq = t.objectStore("projects").add({ name:newName, createdAt: now, updatedAt: now, pointer: 0, palette: origin?.palette || palette });
+        const newId = await new Promise((res,rej)=>{ addReq.onsuccess=()=>res(addReq.result); addReq.onerror=()=>rej(addReq.error); });
 
-        const meta = {
-          name: newName,
-          createdAt: now,
-          updatedAt: now,
-          pointer: 0,
-          palette: origin?.palette || palette
-        };
-
-        // 2) Create new project record in a fresh readwrite transaction
-        const newId = await new Promise((res, rej) => {
-          const t = tx(["projects"], "readwrite");
-          const addReq = t.objectStore("projects").add(meta);
-          addReq.onsuccess = () => res(addReq.result);
-          addReq.onerror   = () => rej(addReq.error);
-        });
-
-        // 3) Copy all states
         let maxRev = 0;
-        await new Promise((res, rej) => {
-          const t2  = tx(["states"], "readwrite");
-          const idx = t2.objectStore("states").index("by_project")
-          .openCursor(IDBKeyRange.only(sourceId));
-
-          idx.onsuccess = (e) => {
-            const c = e.target.result;
-            if (c) {
-              const { rev, state } = c.value;
-              maxRev = Math.max(maxRev, rev);
-              t2.objectStore("states").put({
-                projectId: newId,
-                rev,
-                state: JSON.parse(JSON.stringify(state))
-              });
-              c.continue();
-            } else {
-              res();
-            }
-          };
-          idx.onerror = () => rej(idx.error);
+        await new Promise((res,rej)=>{
+          const t2 = tx(["states"],"readwrite");
+          const idx = t2.objectStore("states").index("by_project").openCursor(IDBKeyRange.only(sourceId));
+          idx.onsuccess=(e)=>{ const c=e.target.result; if(c){ const {rev,state}=c.value; maxRev=Math.max(maxRev,rev); t2.objectStore("states").put({projectId:newId,rev,state:JSON.parse(JSON.stringify(state))}); c.continue(); } else res(); };
+          idx.onerror=()=>rej(idx.error);
         });
-
-        // 4) Copy history
-        await new Promise((res, rej) => {
-          const t3  = tx(["history"], "readwrite");
-          const idx = t3.objectStore("history").index("by_project")
-          .openCursor(IDBKeyRange.only(sourceId));
-
-          idx.onsuccess = (e) => {
-            const c = e.target.result;
-            if (c) {
-              const { seq, action } = c.value;
-              t3.objectStore("history").put({
-                projectId: newId,
-                seq,
-                action: JSON.parse(JSON.stringify(action))
-              });
-              c.continue();
-            } else {
-              res();
-            }
-          };
-          idx.onerror = () => rej(idx.error);
+        await new Promise((res,rej)=>{
+          const t3 = tx(["history"],"readwrite");
+          const idx = t3.objectStore("history").index("by_project").openCursor(IDBKeyRange.only(sourceId));
+          idx.onsuccess=(e)=>{ const c=e.target.result; if(c){ const {seq,action}=c.value; t3.objectStore("history").put({projectId:newId,seq,action:JSON.parse(JSON.stringify(action))}); c.continue(); } else res(); };
+          idx.onerror=()=>rej(idx.error);
         });
-
-        // 5) Finalize new project meta with correct pointer
-        const finalMeta = {
-          id: newId,
-          name: newName,
-          createdAt: now,
-          updatedAt: now,
-          pointer: maxRev,
-          palette: origin?.palette || palette
-        };
-
-        await new Promise((res, rej) => {
-          const t4    = tx(["projects"], "readwrite");
-          const putReq = t4.objectStore("projects").put(finalMeta);
-          putReq.onsuccess = () => res();
-          putReq.onerror   = () => rej(putReq.error);
+        await new Promise((res,rej)=>{
+          const t4 = tx(["projects"],"readwrite");
+          const putReq = t4.objectStore("projects").put({ id:newId, name:newName, createdAt: now, updatedAt: now, pointer: maxRev, palette: origin?.palette || palette });
+          putReq.onsuccess=()=>res(); putReq.onerror=()=>rej(putReq.error);
         });
-
-        return finalMeta;
+        return { id:newId, name:newName, createdAt: now, updatedAt: now, pointer: maxRev, palette: origin?.palette || palette };
       }
-
-
-
       async function updateProjectMeta(patch){
         if (!currentProject) return;
         const now = Date.now();
@@ -1631,6 +1524,63 @@
       }
 
 
+
+
+      // ----- Mobile two-finger pan (endless canvas on touch) -----
+      let touchPanActive = false;
+      let touchPanStart = { x: 0, y: 0 };
+      let touchViewBoxStart = { x: 0, y: 0 };
+
+      svg.addEventListener("touchstart", (e) => {
+        // Only start panning on background, with two fingers
+        if (e.touches.length === 2 && e.target === svg) {
+          e.preventDefault();
+          touchPanActive = true;
+
+          // Do not treat this gesture as a tap that can create a node
+          bgTapCandidate = null;
+
+          // IMPORTANT: use the midpoint between the two fingers
+          const mid = getTouchMidpoint(e);
+          touchPanStart.x = mid.x;
+          touchPanStart.y = mid.y;
+
+          touchViewBoxStart.x = viewBox.x;
+          touchViewBoxStart.y = viewBox.y;
+          setStatus("Panning (two-finger drag)");
+        }
+      }, { passive: false });
+
+      svg.addEventListener("touchmove", (e) => {
+        if (!touchPanActive) return;
+        if (e.touches.length !== 2) return;
+
+        e.preventDefault();
+
+        const rect = svg.getBoundingClientRect();
+        const scaleX = viewBox.w / rect.width;
+        const scaleY = viewBox.h / rect.height;
+
+        // Again, use the midpoint for pan
+        const mid = getTouchMidpoint(e);
+        const dx = (mid.x - touchPanStart.x) * scaleX;
+        const dy = (mid.y - touchPanStart.y) * scaleY;
+
+        viewBox.x = touchViewBoxStart.x - dx;
+        viewBox.y = touchViewBoxStart.y - dy;
+        updateViewBox();
+      }, { passive: false });
+
+      svg.addEventListener("touchend", (e) => {
+        // When fingers are lifted, stop panning
+        if (e.touches.length < 2 && touchPanActive) {
+          touchPanActive = false;
+          setStatus("Mode: pan / add nodes");
+        }
+      });
+
+
+
       // ----- Background: pan or tap-to-add node -----
       svg.addEventListener("pointerdown", (e)=>{
         if (e.button === 2) e.preventDefault();
@@ -1687,14 +1637,10 @@
         hideHoverDot();
       });
 
-      // Combined pinch + pan (two-finger gesture) with debug center marker
-      let pinchActive = false;
-      let pinchStartDistance = 0;
-      let pinchStartZoom = 1;
-      let pinchStartViewBox = { x: 0, y: 0, w: 0, h: 0 };
-      let pinchWorld = { x: 0, y: 0 };   // world-space anchor point
 
-      const pinchCenterDot = document.getElementById("pinch-center");
+
+
+      let pinchLastDistance = null;
 
       function getTouchDistance(e){
         if (e.touches.length < 2) return null;
@@ -1714,88 +1660,34 @@
         };
       }
 
-      svg.addEventListener("touchstart", (e) => {
-        if (e.touches.length === 2) {
-          e.preventDefault();
+      svg.addEventListener("touchstart", (e)=>{
+        if (e.touches.length === 2){
+          pinchLastDistance = getTouchDistance(e);
+        }
+      }, { passive:true });
 
-          // Mark that a multi-touch gesture is active (also used to block bg taps)
-          touchPanActive = true;
+      svg.addEventListener("touchmove", (e)=>{
+        if (e.touches.length === 2 && pinchLastDistance){
+          const d = getTouchDistance(e);
+          if (!d) return;
 
-          pinchActive = true;
-          pinchStartDistance = getTouchDistance(e) || 0.0001;
-          pinchStartZoom = zoom;
-          pinchStartViewBox = { x: viewBox.x, y: viewBox.y, w: viewBox.w, h: viewBox.h };
-
+          const factor = d / pinchLastDistance;
           const mid = getTouchMidpoint(e);
+          applyZoomFactor(factor, mid.x, mid.y);
+          pinchLastDistance = d;
 
-          // World coordinate under the midpoint at gesture start
-          const svgMid = screenToSvg(mid.x, mid.y);
-          pinchWorld.x = svgMid.x;
-          pinchWorld.y = svgMid.y;
-
-          // Show debug circle in WORLD coordinates (same space as nodes)
-          if (pinchCenterDot) {
-            pinchCenterDot.setAttribute("cx", pinchWorld.x);
-            pinchCenterDot.setAttribute("cy", pinchWorld.y);
-            pinchCenterDot.style.display = "block";
-          }
+          // prevent the browser default pinch-zoom
+          e.preventDefault();
         }
-      }, { passive: false });
+      }, { passive:false });
 
-      svg.addEventListener("touchmove", (e) => {
-        if (!pinchActive || e.touches.length !== 2) return;
-
-        e.preventDefault();
-
-        const dist = getTouchDistance(e);
-        if (!dist) return;
-
-        const rect = svg.getBoundingClientRect();
-        const mid = getTouchMidpoint(e);
-
-        // Scale relative to the gesture start
-        let scale = dist / pinchStartDistance;
-        let nextZoom = pinchStartZoom * scale;
-
-        // Clamp zoom
-        if (nextZoom < MIN_ZOOM) nextZoom = MIN_ZOOM;
-        if (nextZoom > MAX_ZOOM) nextZoom = MAX_ZOOM;
-
-        const zoomFactor = nextZoom / pinchStartZoom;
-        if (zoomFactor === 0) return;
-
-        // New viewBox size
-        viewBox.w = pinchStartViewBox.w / zoomFactor;
-        viewBox.h = pinchStartViewBox.h / zoomFactor;
-
-        // Anchor the original world point (pinchWorld) under the current midpoint
-        const normX = (mid.x - rect.left) / rect.width;
-        const normY = (mid.y - rect.top) / rect.height;
-
-        viewBox.x = pinchWorld.x - normX * viewBox.w;
-        viewBox.y = pinchWorld.y - normY * viewBox.h;
-
-        zoom = nextZoom;
-        updateViewBox();
-        updateZoomLabel();
-        setStatus(`Zoom: ${(zoom * 100).toFixed(0)}%`);
-
-        // Keep debug dot at the anchored world point
-        if (pinchCenterDot) {
-          pinchCenterDot.setAttribute("cx", pinchWorld.x);
-          pinchCenterDot.setAttribute("cy", pinchWorld.y);
-        }
-      }, { passive: false });
-
-      svg.addEventListener("touchend", (e) => {
-        if (e.touches.length < 2) {
-          pinchActive = false;
-          touchPanActive = false;
-          if (pinchCenterDot) {
-            pinchCenterDot.style.display = "none";
-          }
+      svg.addEventListener("touchend", (e)=>{
+        if (e.touches.length < 2){
+          pinchLastDistance = null;
         }
       });
+
+
 
 
 
@@ -1871,6 +1763,8 @@
 
         bgTapCandidate = null;
       }
+
+
 
 
 
@@ -2064,92 +1958,41 @@
       hamburger.addEventListener("click", ()=>{
         hambMenu.style.display = (hambMenu.style.display==="block") ? "none" : "block";
       });
-
-
       document.addEventListener("pointerdown", (e)=>{
-        const target = e.target;
-
-        // Close hamburger menu when clicking outside
-        if (!hambMenu.contains(target) && target !== hamburger){
+        if (!hambMenu.contains(e.target) && e.target !== hamburger){
           hambMenu.style.display = "none";
         }
-
-        // Close hint/sidebar when clicking outside it
-        if (sidebarOpen && !sidebar.contains(target) && target !== btnHelp){
-          sidebarOpen = false;
-          sidebar.style.display = "none";
-        }
       });
 
-
-
-      hambMenu.addEventListener("click", (e)=>{
-        const b = e.target.closest("button");
-        if (!b) return;
-
+      hambMenu.addEventListener("click", async (e)=>{
+        const b = e.target.closest("button"); if (!b) return;
         const act = b.getAttribute("data-mobile");
-
-        if (act === "open") {
-          btnSwitch.click();
-        } else if (act === "new") {
-          btnNew.click();
-        } else if (act === "dup") {
-          btnDup.click();
-        } else if (act === "del") {
-          btnDel.click();
-        } else if (act === "save") {
-          btnSave.click();
-        } else if (act === "hint") {
-          btnHelp.click();
+        if (act==="open"){ await refreshProjectList(); gateOn(); setStatus("Open project"); }
+        if (act==="new"){
+          const name = prompt("New project name:"); if (!name || !name.trim()) return;
+          try{ const p = await createProject(name.trim()); await refreshProjectList(); await openProject(p); }
+          catch(err){ setStatus("Create failed (name exists?)"); }
         }
-
+        if (act==="dup"){
+          if (!currentProject){ setStatus("No project to duplicate"); return; }
+          await persistSnapshot();
+          const name = prompt(`Duplicate "${currentProject.name}" as:`); if (!name || !name.trim()) return;
+          try{ const dup = await duplicateProject(currentProject.id, name.trim()); await refreshProjectList(); await openProject(dup); setStatus(`Duplicated as "${dup.name}"`); }
+          catch(err){ setStatus("Duplicate failed (name exists?)"); }
+        }
+        if (act==="del"){
+          if (!currentProject) return;
+          const ok = confirm(`Delete project "${currentProject.name}"? This cannot be undone.`); if (!ok) return;
+          await deleteProject(currentProject.id); await refreshProjectList(); gateOn();
+        }
+        if (act==="save"){
+          await persistSnapshot();
+        }
+        if (act==="hint"){
+          sidebarOpen = true; sidebar.style.display = "flex";
+        }
         hambMenu.style.display = "none";
       });
-
-
-
-      // hambMenu.addEventListener("click", async (e)=>{
-      //   const b = e.target.closest("button"); if (!b) return;
-      //   const act = b.getAttribute("data-mobile");
-      //   if (act==="open"){ await refreshProjectList(); gateOn(); setStatus("Open project"); }
-      //   if (act==="new"){
-      //     const name = prompt("New project name:"); if (!name || !name.trim()) return;
-      //     try{ const p = await createProject(name.trim()); await refreshProjectList(); await openProject(p); }
-      //     catch(err){ setStatus("Create failed (name exists?)"); }
-      //   }
-
-      //   if (act === "dup") {
-      //     if (!currentProject) {
-      //       setStatus("No project to duplicate");
-      //       return;
-      //     }
-
-      //     const defaultName = `${currentProject.name} (copy)`;
-      //     const name = prompt(`Duplicate "${currentProject.name}" as:`, defaultName);
-      //     if (!name || !name.trim()) return;
-
-      //     // Run the actual async work outside the sync click handler
-      //     duplicateCurrentProject(name.trim());
-      //   }
-
-
-      //   if (act==="del"){
-      //     if (!currentProject) return;
-      //     const ok = confirm(`Delete project "${currentProject.name}"? This cannot be undone.`); if (!ok) return;
-      //     await deleteProject(currentProject.id); await refreshProjectList(); gateOn();
-      //   }
-      //   if (act==="save"){
-      //     await persistSnapshot();
-      //   }
-
-      //   if (act==="hint"){
-      //     sidebarOpen = !sidebarOpen;
-      //     sidebar.style.display = sidebarOpen ? "flex" : "none";
-      //   }
-
-
-      //   hambMenu.style.display = "none";
-      // });
 
       projectClose.addEventListener("click", () => {
         gateOff();
@@ -2254,27 +2097,26 @@
       function gateOff(){ gate.style.display = "none"; gateCover.style.display = "none"; }
 
 
+
+
+
       async function refreshProjectList(){
         const items = await listProjects();
-        projectListItems = items;   // cache for the delegated handler
-
         listEl.innerHTML = "";
-
-        if (items.length === 0){
+        if (items.length===0){
           const d = document.createElement("div");
-          d.className = "proj-row";
+          d.className="proj-row";
           d.innerHTML = `<span class="proj-meta">No projects yet.</span>`;
           listEl.appendChild(d);
           return;
         }
-
         items.forEach(p=>{
           const row = document.createElement("div");
-          row.className = "proj-row";
+          row.className="proj-row";
           row.innerHTML = `
             <div>
               <div class="proj-name">${p.name}</div>
-              <div class="proj-meta">Updated: ${new Date(p.updatedAt || p.createdAt).toLocaleString()}</div>
+              <div class="proj-meta">Updated: ${new Date(p.updatedAt||p.createdAt).toLocaleString()}</div>
             </div>
             <div class="row-actions">
               <button class="btn primary" data-open="${p.id}">Open</button>
@@ -2283,139 +2125,24 @@
           </div>`;
           listEl.appendChild(row);
         });
-      }
-
-      listEl.addEventListener("click", async (e) => {
-        const btn = e.target.closest("button[data-open],button[data-dup],button[data-del]");
-        if (!btn) return;
-
-        const id   = Number(btn.dataset.open || btn.dataset.dup || btn.dataset.del);
-        const proj = projectListItems.find(x => x.id === id);
-        if (!proj) return;
-
-        // Open
-        if (btn.dataset.open !== undefined) {
-          await openProject(proj);
-          return;
-        }
-
-        // Duplicate
-        if (btn.dataset.dup !== undefined) {
-          const name = prompt(
-        `Name for the duplicate of "${proj.name}":`,
-      `${proj.name} (copy)`
-      );
+        listEl.querySelectorAll("[data-open]").forEach(b=> b.addEventListener("click", async (e)=>{
+          const id = Number(e.currentTarget.getAttribute("data-open"));
+          const all = await listProjects();
+          const match = all.find(x=>x.id===id);
+          if (!match) return; await openProject(match);
+        }));
+        listEl.querySelectorAll("[data-dup]").forEach(b=> b.addEventListener("click", async (e)=>{
+          const id = Number(e.currentTarget.getAttribute("data-dup"));
+          const name = prompt("Name for the duplicate:");
           if (!name || !name.trim()) return;
-
-          try {
-            const dup = await duplicateProject(proj.id, name.trim());
-            await refreshProjectList();
-            await openProject(dup);
-            setStatus(`Duplicated as "${dup.name}"`);
-          } catch (err) {
-            console.error("Duplicate from project list failed", err);
-            setStatus("Duplicate failed (name exists?)");
-          }
-          return;
-        }
-
-        // Delete
-        if (btn.dataset.del !== undefined) {
-          const ok = confirm(
-        `Delete project "${proj.name}"?\n\nThis cannot be undone.\n\nSure / No`
-        );
-          if (!ok) return;
-
-          await deleteProject(proj.id);
-          await refreshProjectList();
-          setStatus(`Project "${proj.name}" deleted`);
-          return;
-        }
-      });
-
-
-
-
-      // async function refreshProjectList(){
-      //   const items = await listProjects();
-      //   listEl.innerHTML = "";
-      //   if (items.length===0){
-      //     const d = document.createElement("div");
-      //     d.className="proj-row";
-      //     d.innerHTML = `<span class="proj-meta">No projects yet.</span>`;
-      //     listEl.appendChild(d);
-      //     return;
-      //   }
-      //   items.forEach(p=>{
-      //     const row = document.createElement("div");
-      //     row.className="proj-row";
-      //     row.innerHTML = `
-      //       <div>
-      //         <div class="proj-name">${p.name}</div>
-      //         <div class="proj-meta">Updated: ${new Date(p.updatedAt||p.createdAt).toLocaleString()}</div>
-      //       </div>
-      //       <div class="row-actions">
-      //         <button class="btn primary" data-open="${p.id}">Open</button>
-      //         <button class="btn" data-dup="${p.id}">Duplicate…</button>
-      //         <button class="btn danger" data-del="${p.id}">Delete</button>
-      //     </div>`;
-      //     listEl.appendChild(row);
-      //   });
-      //   listEl.querySelectorAll("[data-open]").forEach(b=> b.addEventListener("click", async (e)=>{
-      //     const id = Number(e.currentTarget.getAttribute("data-open"));
-      //     const all = await listProjects();
-      //     const match = all.find(x=>x.id===id);
-      //     if (!match) return; await openProject(match);
-      //   }));
-
-
-      //   listEl.querySelectorAll("[data-dup]").forEach(b =>
-      //     b.addEventListener("click", async (e) => {
-      //       const id = Number(e.currentTarget.getAttribute("data-dup"));
-      //       const proj = items.find(x => x.id === id);
-      //       if (!proj) return;
-
-      //       // Default duplicate name, e.g. "My map (copy)"
-      //       const name = prompt(
-      //     `Name for the duplicate of "${proj.name}":`,
-      //   `${proj.name} (copy)`
-      //   );
-      //       if (!name || !name.trim()) return;
-
-      //       try {
-      //         const dup = await duplicateProject(id, name.trim());
-      //         await refreshProjectList();
-      //         await openProject(dup);
-      //         setStatus(`Duplicated as "${dup.name}"`);
-      //       } catch (err) {
-      //         console.error("Duplicate from project list failed", err);
-      //         setStatus("Duplicate failed (name exists?)");
-      //       }
-      //     })
-      //     );
-
-
-
-      //   listEl.querySelectorAll("[data-del]").forEach(b =>
-      //     b.addEventListener("click", async (e) => {
-      //       const id = Number(e.currentTarget.getAttribute("data-del"));
-      //       const proj = items.find(x => x.id === id);
-      //       if (!proj) return;
-
-      //       const ok = confirm(
-      //     `Delete project "${proj.name}"?\n\nThis cannot be undone.\n\nSure / No`
-      //     );
-      //       if (!ok) return;
-
-      //       await deleteProject(id);
-      //       await refreshProjectList();
-      //       setStatus(`Project "${proj.name}" deleted`);
-      //     })
-      //     );
-
-
-
-      // }
+          try{ const dup = await duplicateProject(id, name.trim()); await refreshProjectList(); await openProject(dup); setStatus(`Duplicated as "${dup.name}"`); }
+          catch(err){ setStatus("Duplicate failed (name exists?)"); }
+        }));
+        listEl.querySelectorAll("[data-del]").forEach(b=> b.addEventListener("click", async (e)=>{
+          const id = Number(e.currentTarget.getAttribute("data-del"));
+          await deleteProject(id); await refreshProjectList();
+        }));
+      }
 
       async function deleteProject(id){
         await new Promise((res,rej)=>{
@@ -2513,11 +2240,12 @@
           positionColorInput();
         });
 
+
+
       }
 
       boot();
     })();
   </script>
-
 </body>
 </html>
