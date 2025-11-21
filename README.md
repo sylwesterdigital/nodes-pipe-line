@@ -203,3 +203,7 @@ Short-term ideas for this repo:
 ## Status
 
 This is still a **UI + persistence playground**, not a finished workflow engine.
+
+
+## License
+[GNU LESSER GENERAL PUBLIC LICENSE Version 2.1, February 1999](LICENSE)
