@@ -438,6 +438,13 @@
     <svg id="canvas">
       <g id="links-layer"></g>
       <line id="temp-link" x1="0" y1="0" x2="0" y2="0"></line>
+      <!-- little marker when hovering / snapping over a line -->
+      <circle id="hover-dot"
+      r="4"
+      fill="#ffffff"
+      stroke="#000000"
+      stroke-width="1"
+      style="display:none; pointer-events:none;"></circle>
       <g id="nodes-layer"></g>
     </svg>
 
@@ -514,6 +521,8 @@
       const nodesLayer = document.getElementById("nodes-layer");
       const linksLayer = document.getElementById("links-layer");
       const tempLink = document.getElementById("temp-link");
+      const hoverDot = document.getElementById("hover-dot");
+
       const statusEl = document.getElementById("status");
       const menu = document.getElementById("menu");
       const wrapper = document.getElementById("canvas-wrapper");
@@ -810,7 +819,6 @@
 
       // ----- Utils -----
 
-
       function isTextEditingTarget(e){
         const el = e.target;
         if (!el) return false;
@@ -821,8 +829,135 @@
       }
 
 
+      // distance + projection of a point to a segment
+      function pointSegmentInfo(px, py, x1, y1, x2, y2){
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        if (dx === 0 && dy === 0){
+          const d = dist(px, py, x1, y1);
+          return { dist: d, t: 0, x: x1, y: y1 };
+        }
+        const tRaw = ((px - x1) * dx + (py - y1) * dy) / (dx*dx + dy*dy);
+        const t = Math.max(0, Math.min(1, tRaw));      // clamp to segment
+        const projX = x1 + t * dx;
+        const projY = y1 + t * dy;
+        const d = dist(px, py, projX, projY);
+        return { dist: d, t, x: projX, y: projY };
+      }
+
+      // find the best link under (px,py)
+      function findNearestLinkPoint(px, py, opts={}){
+        const maxDist     = opts.maxDist ?? 24;
+        const ignoreNodeId= opts.ignoreNodeId ?? null;
+        let best = null;
+
+        links.forEach(link => {
+          const from = nodes.find(n => n.id === link.from);
+          const to   = nodes.find(n => n.id === link.to);
+          if (!from || !to) return;
+
+          // optional: ignore links attached to a specific node
+          if (ignoreNodeId && (from.id === ignoreNodeId || to.id === ignoreNodeId)) return;
+
+          const info = pointSegmentInfo(px, py, from.x, from.y, to.x, to.y);
+
+          // ignore very near endpoints (t ~ 0 or 1)
+          if (info.dist <= maxDist && info.t > 0.08 && info.t < 0.92){
+            if (!best || info.dist < best.info.dist){
+              best = { link, from, to, info };
+            }
+          }
+        });
+
+        return best;
+      }
+
+      // create a new node on a link (click-on-line)
+      function insertNodeOnNearestLink(px, py){
+        const best = findNearestLinkPoint(px, py, { maxDist: 24 });
+        if (!best) return false;
+
+        // create node snapped onto the line
+        const newId = nextId;
+        addNodeWrapped(best.info.x, best.info.y);
+        const newNode = nodes.find(n => n.id === newId);
+        if (!newNode) return false;
+
+        const originalColor =
+        (best.link.style && best.link.style.color) || selectedColor();
+
+        // remove original link
+        links = links.filter(l => l !== best.link);
+
+        // add two new links with same color
+        links.push(
+          { from: best.from.id, to: newNode.id, style: { color: originalColor } },
+          { from: newNode.id,   to: best.to.id, style: { color: originalColor } }
+          );
+        renderLinks();
+
+        pushAction({
+          type: "SPLIT_LINK",
+          at: Date.now(),
+          from: best.from.id,
+          to:   best.to.id,
+          via:  newNode.id,
+          color: originalColor
+        });
+
+        setStatus(`Inserted node between ${best.from.label} and ${best.to.label}`);
+        return true;
+      }
+
+      // reuse splitting logic when dropping an existing node onto a link
+      function splitExistingLinkWithNode(node, best){
+        const original = best.link;
+        const originalColor =
+        (original.style && original.style.color) || selectedColor();
+
+        // remove the original link
+        links = links.filter(l => l !== original);
+
+        // add two new links that pass through this node
+        links.push(
+          { from: best.from.id, to: node.id, style: { color: originalColor } },
+          { from: node.id,      to: best.to.id, style: { color: originalColor } }
+          );
+        renderLinks();
+
+        pushAction({
+          type: "SPLIT_LINK_WITH_EXISTING_NODE",
+          at: Date.now(),
+          via:  node.id,
+          from: best.from.id,
+          to:   best.to.id,
+          color: originalColor
+        });
+
+        setStatus(`Inserted ${node.label} into link ${best.from.label} → ${best.to.label}`);
+      }
+
+
+
+
 
       function setStatus(text){ statusEl.textContent = text; }
+
+      function showHoverDotAt(x, y){
+        if (!hoverDot) return;
+        hoverDot.setAttribute("cx", x);
+        hoverDot.setAttribute("cy", y);
+        hoverDot.style.display = "block";
+      }
+
+      function hideHoverDot(){
+        if (!hoverDot) return;
+        hoverDot.style.display = "none";
+      }
+
+
+
+
       function svgPoint(evt){
         const pt = svg.createSVGPoint();
         pt.x = evt.clientX; pt.y = evt.clientY;
@@ -1348,6 +1483,15 @@
         dragNode.x = p.x + dragOffset.x;
         dragNode.y = p.y + dragOffset.y;
         renderAll();
+
+        // while dragging, show dot at the link we would insert into
+        const best = findNearestLinkPoint(
+          dragNode.x,
+          dragNode.y,
+          { maxDist: 24, ignoreNodeId: dragNode.id }
+          );
+        if (best) showHoverDotAt(best.info.x, best.info.y);
+        else      hideHoverDot();
       }
 
       function onCanvasPointerUp(e){
@@ -1356,10 +1500,29 @@
         dragCandidate = null;
 
         if (dragNode){
-          moveNodeWrapped(dragNode);
+          const movedNode = dragNode;
+
+          // see if this node was dropped onto a link (ignore links it already ends on)
+          const best = findNearestLinkPoint(
+            movedNode.x,
+            movedNode.y,
+            { maxDist: 24, ignoreNodeId: movedNode.id }
+            );
+
+          // first: finalize movement (records MOVE_NODE in history)
+          moveNodeWrapped(movedNode);
+
+          // then: if we had a link under us, split it using this node
+          if (best){
+            splitExistingLinkWithNode(movedNode, best);
+          }
+
           dragNode = null;
         }
+
+        hideHoverDot();
       }
+
 
 
 
@@ -1452,6 +1615,28 @@
         svg.addEventListener("pointermove", onBgPointerMove);
         svg.addEventListener("pointerup", onBgPointerUp, { once:true });
       });
+
+      // hover feedback: little white dot on the closest line
+      svg.addEventListener("pointermove", (e)=>{
+        if (!currentProject) { hideHoverDot(); return; }
+
+        // while dragging or linking or panning, let other logic handle it
+        if (dragNode || dragCandidate || linkingFrom || isPanning || touchPanActive) {
+          // dragNode case is handled in onCanvasPointerMove
+          if (!dragNode) hideHoverDot();
+          return;
+        }
+
+        const p = svgPoint(e);
+        const best = findNearestLinkPoint(p.x, p.y, { maxDist: 18 });
+        if (best) showHoverDotAt(best.info.x, best.info.y);
+        else hideHoverDot();
+      });
+
+      svg.addEventListener("pointerleave", () => {
+        hideHoverDot();
+      });
+
 
 
 
@@ -1563,6 +1748,14 @@
         }
 
         const p = svgPoint(e);
+
+        // 1) first try: insert node on an existing link (gateway)
+        if (insertNodeOnNearestLink(p.x, p.y)){
+          bgTapCandidate = null;
+          return;
+        }
+
+        // 2) fallback: normal "add node in empty space"
         const nearExisting = nodes.some(n => dist(n.x, n.y, p.x, p.y) < 32);
         if (!nearExisting) {
           addNodeWrapped(p.x, p.y);
@@ -1570,6 +1763,7 @@
 
         bgTapCandidate = null;
       }
+
 
 
 
@@ -1635,7 +1829,9 @@
         tempLink.style.display = "none";
         svg.removeEventListener("pointermove", onCanvasPointerMove);
         svg.removeEventListener("pointerdown", onLinkPointerDown);
+        hideHoverDot();
       }
+
 
       // prevent context menu while dragging/linking
       nodesLayer.addEventListener("contextmenu", (e)=>{
