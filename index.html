@@ -1200,8 +1200,8 @@
 
       /* Zoom state */
       let zoom = 1;
-      const MIN_ZOOM = 0.4;
-      const MAX_ZOOM = 4;
+      const MIN_ZOOM = 0.01;
+      const MAX_ZOOM = 5;
       const ZOOM_STEP = 1.2;      
 
       function updateZoomLabel(){
@@ -3261,7 +3261,7 @@ let pinchStartViewBox = { x: 0, y: 0, w: 0, h: 0 };
           }
 
 
-          
+
 
         } else if (act === "clear-lines") {
           if (!currentProject) {
@@ -4206,20 +4206,33 @@ let pinchStartViewBox = { x: 0, y: 0, w: 0, h: 0 };
 
         window.addEventListener("resize", () => {
           const rect = svg.getBoundingClientRect();
+          if (!rect.width || !rect.height) {
+            positionColorInput();
+            return;
+          }
+
+          // keep current world center
           const cx = viewBox.x + viewBox.w / 2;
           const cy = viewBox.y + viewBox.h / 2;
 
-          const newW = rect.width  || viewBox.w;
-          const newH = rect.height || viewBox.h;
+          // update "base" size used for zoom=1
+          baseViewBox.w = rect.width;
+          baseViewBox.h = rect.height;
 
-          viewBox.w = newW;
-          viewBox.h = newH;
-          viewBox.x = cx - newW / 2;
-          viewBox.y = cy - newH / 2;
+          // recompute viewBox size from current zoom
+          // zoom is defined as baseViewBox.w / viewBox.w
+          viewBox.w = baseViewBox.w / zoom;
+          viewBox.h = baseViewBox.h / zoom;
+
+          // keep same center in world coordinates
+          viewBox.x = cx - viewBox.w / 2;
+          viewBox.y = cy - viewBox.h / 2;
 
           updateViewBox();
+          updateZoomLabel();
           positionColorInput();
         });
+
 
         console.log("[boot] complete");
       }
