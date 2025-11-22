@@ -15,6 +15,8 @@
     /* Base + mobile hygiene */
     * { box-sizing: border-box; margin:0; padding:0; }
     html, body { height:100%; }
+
+
     :root{
       --bg:#13141a;
       --panel:#1b1c25;
@@ -26,7 +28,19 @@
       --pill-b:#334155;
       --shadow:rgba(0,0,0,.4);
       --fs:16px;
+
+      /* menus / popovers */
+      --menu-bg:#0f172a;
+      --menu-border:#334155;
+      --menu-hover:#1f2937;
+
+      /* project list rows */
+      --row-hover-bg:#222536;
     }
+
+
+
+
     * { -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; }
     body { overscroll-behavior: none; }
     body {
@@ -72,27 +86,46 @@
 
     #status {
       position:absolute;
-      left:12px;
-      top:12px;
+      transform: translateX(-50%);
+      left: 50%;
+      top: 60px;
       bottom:auto;
       padding:8px 12px;
       border-radius:999px;
       background:rgba(15,23,42,0.88);
       border:1px solid rgba(148,163,184,0.5);
-      font-size:16px;
+      font-size:12px;
+      pointer-events: none;
     }
 
     #menu {
-      position:absolute; min-width:200px; background:#0f172a; border:1px solid #334155;
-      border-radius:10px; box-shadow:0 10px 30px var(--shadow); padding:6px; display:none; z-index:20;
+      position:absolute;
+      min-width:200px;
+      background:var(--menu-bg);
+      border:1px solid var(--menu-border);
+      border-radius:10px;
+      box-shadow:0 10px 30px var(--shadow);
+      padding:6px;
+      display:none;
+      z-index:20;
     }
     #menu button {
-      width:100%; text-align:left; padding:10px 12px; background:transparent; color:var(--text);
-      border:none; border-radius:8px; font-size:16px;
+      width:100%;
+      text-align:left;
+      padding:10px 12px;
+      background:transparent;
+      color:var(--text);
+      border:none;
+      border-radius:8px;
+      font-size:16px;
     }
-    #menu button:hover { background:#1f2937; }
+    #menu button:hover { background:var(--menu-hover); }
     #menu .danger:hover { background:#f44336; color:#fecaca; }
-    #menu hr { border:0; border-top:1px solid #334155; margin:6px 0; }
+    #menu hr {
+      border:0;
+      border-top:1px solid var(--menu-border);
+      margin:6px 0;
+    }
 
     /* Topbar */
     #topbar {
@@ -189,12 +222,33 @@
       display:none;             /* Chrome / Safari */
     }
 
+    .proj-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:10px;
+      border-radius:8px;
+      gap:10px;
+    }
+    .proj-row:hover{
+      background:var(--row-hover-bg);
+    }
+    .proj-name{
+      font-size:16px;
+    }
+    .proj-meta{
+      font-size:12px;
+      opacity:.8;
+    }
+    .row-actions{
+      display:flex;
+      gap:8px;
+    }
 
-    .proj-row{ display:flex; align-items:center; justify-content:space-between; padding:10px; border-radius:8px; gap:10px; }
-    .proj-row:hover{ background:#222536; }
-    .proj-name{ font-size:16px; }
-    .proj-meta{ font-size:12px; opacity:.8; }
-    .row-actions{ display:flex; gap:8px; }
+
+
+
+
     #project-form{ display:flex; gap:8px; margin-top:8px; }
     #project-name{
       flex:1; padding:10px 12px; border-radius:8px; border:1px solid var(--muted-2);
@@ -228,15 +282,21 @@
       height:44px;
       display:grid;
       place-items:center;
+      color: var(--text);  
     }
-    #hamburger span{font-size:20px;line-height:1}
+    #hamburger span{
+      font-size:20px;
+      line-height:1;
+      color: inherit;  
+    }
+
     #hamburger-menu{
       position:absolute;
       right:12px;
       top:60px;
       z-index:41;
-      background:#0f172a;
-      border:1px solid #334155;
+      background:var(--menu-bg);
+      border:1px solid var(--menu-border);
       border-radius:12px;
       box-shadow:0 12px 30px var(--shadow);
       display:none;
@@ -252,7 +312,10 @@
       text-align:left;
       font-size:16px;
     }
-    #hamburger-menu button:hover{background:#1f2937}
+    #hamburger-menu button:hover{
+      background:var(--menu-hover);
+    }
+
 
     #mobile-undo-redo{
       position:absolute;
@@ -413,7 +476,6 @@
       flex-direction:column;
       gap:8px;
       align-items:center;
-      background:var(--pill);
       font-size:14px;
     }
 
@@ -433,6 +495,8 @@
       text-align:center;
     }
 
+
+
     /* Light theme */
     :root[data-theme="light"]{
       --bg:#f9fafb;
@@ -443,7 +507,17 @@
       --pill:#e5e7eb;
       --pill-b:#cbd5e1;
       --shadow:rgba(15,23,42,0.15);
+
+      /* menus / popovers */
+      --menu-bg:#ffffff;
+      --menu-border:#cbd5e1;
+      --menu-hover:#e5e7eb;
+
+      /* project list rows */
+      --row-hover-bg:#e5e7eb;
     }
+
+
 
     :root[data-theme="light"] #canvas{
       background: radial-gradient(circle at top left,#e5e7eb 0,#f3f4f6 55%);
@@ -532,10 +606,169 @@
       align-items:center;
       gap:4px;
     }
-  </style>
+
+/* Dialog overlay */
+#dialog-overlay{
+  position:absolute;
+  inset:0;
+  display:none;
+  align-items:flex-end;
+  justify-content:center;
+  background:rgba(0,0,0,.55);
+  z-index:80;
+  padding:12px;
+}
+
+#dialog-card{
+  width:100%;
+  max-width:480px;
+  margin-bottom:4px;
+  background:var(--panel);
+  border-radius:18px 18px 0 0;
+  border:1px solid var(--muted-2);
+  box-shadow:0 16px 40px var(--shadow);
+  padding:16px 16px 10px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+}
+
+@media (min-width:768px){
+  #dialog-overlay{
+    align-items:center;
+  }
+  #dialog-card{
+    max-width:420px;
+    border-radius:14px;
+    margin-bottom:0;
+  }
+}
+
+#dialog-title{
+  font-size:17px;
+  font-weight:600;
+  text-align:center;
+}
+
+#dialog-message{
+  font-size:15px;
+  line-height:1.4;
+  text-align:center;
+  white-space:pre-wrap;
+}
+
+#dialog-input{
+  margin-top:4px;
+  width:100%;
+  padding:10px 12px;
+  border-radius:10px;
+  border:1px solid var(--muted-2);
+  background:#020617;
+  color:var(--text);
+  font-size:16px;
+}
+
+.dialog-actions{
+  margin-top:8px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.dialog-actions .btn{
+  width:100%;
+  justify-content:center;
+  font-size:16px;
+  padding:12px;
+}
+
+/* Layout bottom sheet */
+#layout-overlay{
+  position:absolute;
+  inset:0;
+  display:none;
+  align-items:flex-end;
+  justify-content:center;
+  background:rgba(0,0,0,.55);
+  z-index:79;
+  padding:12px;
+}
+
+#layout-card{
+  width:100%;
+  max-width:480px;
+  margin-bottom:4px;
+  background:var(--panel);
+  border-radius:18px 18px 0 0;
+  border:1px solid var(--muted-2);
+  box-shadow:0 16px 40px var(--shadow);
+  padding:16px 16px 12px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+@media (min-width:768px){
+  #layout-overlay{
+    align-items:center;
+  }
+  #layout-card{
+    max-width:420px;
+    border-radius:14px;
+    margin-bottom:0;
+  }
+}
+
+#layout-title{
+  font-size:17px;
+  font-weight:600;
+  text-align:center;
+}
+
+#layout-message{
+  font-size:14px;
+  line-height:1.4;
+  text-align:center;
+  opacity:.9;
+}
+
+#layout-list{
+  margin-top:4px;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+#layout-list .btn{
+  width:100%;
+  justify-content:center;
+  font-size:16px;
+  padding:10px 12px;
+}
+
+.layout-actions{
+  margin-top:6px;
+  display:flex;
+  justify-content:center;
+}
 
 
 
+
+
+
+</style>
+
+
+<script>
+  if (navigator.onLine) {
+    const s = document.createElement('script');
+    s.src = 'https://analytics.mielniczuk.com/script.js';
+    s.defer = true;
+    s.dataset.websiteId = '3a699de2-3ece-40f4-bc5c-5934996109e5';
+    document.head.appendChild(s);
+  }
+</script>
 
 
 </head>
@@ -557,6 +790,40 @@
 
     </div>
   </aside>
+
+
+  <div id="dialog-overlay">
+    <div id="dialog-card">
+      <h2 id="dialog-title"></h2>
+      <p id="dialog-message"></p>
+      <input id="dialog-input" />
+      <div class="dialog-actions">
+        <button id="dialog-cancel" class="btn">Cancel</button>
+        <button id="dialog-ok" class="btn primary">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Layout chooser overlay -->
+  <div id="layout-overlay">
+    <div id="layout-card">
+      <h2 id="layout-title">Layouts</h2>
+      <p id="layout-message">Choose how to arrange the current graph.</p>
+
+      <div id="layout-list">
+        <button class="btn" data-layout="tree-down">Tree: top → bottom</button>
+        <button class="btn" data-layout="tree-up">Tree: bottom → top</button>
+        <button class="btn" data-layout="tree-right">Tree: left → right</button>
+        <button class="btn" data-layout="tree-left">Tree: right → left</button>
+      </div>
+
+      <div class="layout-actions">
+        <button id="layout-close" class="btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+
 
 
   <!-- Node description overlay -->
@@ -687,6 +954,10 @@
       <button id="btn-new" class="btn">New</button>
       <button id="btn-dup" class="btn">Clone</button>
       <button id="btn-del" class="btn danger">Delete</button>
+      <button id="btn-layouts" class="btn">Layouts</button>
+
+      <button id="btn-clear-lines" class="btn">Clear Lines</button>
+      <button id="btn-clear" class="btn danger">Clear</button>      
 
       <button id="btn-config" class="btn">Config</button>
       <button id="btn-help" class="btn" title="Show help">?</button>
@@ -723,6 +994,11 @@
       <button data-mobile="dup">Clone</button>
       <button data-mobile="del">Delete</button>
       <button data-mobile="save">Save</button>
+
+      <button data-mobile="clear-lines">Clear lines</button>
+      <button data-mobile="clear-all">Clear all</button>
+      <button data-mobile="layouts">Layouts…</button>
+
       <button data-mobile="config">Config</button>
     </div>
 
@@ -774,6 +1050,10 @@
       const btnUndo   = document.getElementById("btn-undo");
       const btnRedo   = document.getElementById("btn-redo");
       const btnSave   = document.getElementById("btn-save");
+      const btnClearLines = document.getElementById("btn-clear-lines");
+      const btnClear      = document.getElementById("btn-clear");
+
+
       const gateCover = document.getElementById("gate-cover");
 
       const zoomInBtn  = document.getElementById("zoom-in");
@@ -824,6 +1104,23 @@
       const configThemeToggle = document.getElementById("config-theme-toggle");
 
       const THEME_KEY = "nodeCanvasTheme";
+
+
+      /* Dialog overlay refs */
+      const dialogOverlay  = document.getElementById("dialog-overlay");
+      const dialogTitle    = document.getElementById("dialog-title");
+      const dialogMessage  = document.getElementById("dialog-message");
+      const dialogInput    = document.getElementById("dialog-input");
+      const dialogCancel   = document.getElementById("dialog-cancel");
+      const dialogOk       = document.getElementById("dialog-ok");      
+
+
+      /* Layout overlay refs */
+      const layoutOverlay  = document.getElementById("layout-overlay");
+      const layoutClose    = document.getElementById("layout-close");
+      const layoutList     = document.getElementById("layout-list");
+
+      const btnLayouts     = document.getElementById("btn-layouts");
 
 
 
@@ -1082,6 +1379,33 @@
       // ----- Utils -----
 
 
+      function confirmDialog(message, title){
+        return openDialog({
+          title: title || "Confirm",
+          message,
+          showInput: false,
+          okText: "Yes",
+          cancelText: "No"
+        });
+      }
+
+      function promptDialog(message, defaultValue, title){
+        return openDialog({
+          title: title || "Input",
+          message,
+          showInput: true,
+          defaultValue,
+          okText: "OK",
+          cancelText: "Cancel"
+        });
+      }
+
+
+
+
+
+
+
       async function duplicateCurrentProject(newName){
         try {
           await confirmSaveIfDirty();
@@ -1236,10 +1560,298 @@
       }
 
 
+      // ----- Graph layout engine (tree in 4 directions) -----
+
+      function showLayoutOverlay(){
+        if (!nodes.length){
+          setStatus("No nodes to layout");
+          return;
+        }
+        layoutOverlay.style.display = "flex";
+      }
+
+      function hideLayoutOverlay(){
+        layoutOverlay.style.display = "none";
+      }
+
+      if (btnLayouts){
+        btnLayouts.addEventListener("click", () => {
+          showLayoutOverlay();
+        });
+      }
+
+      if (layoutClose){
+        layoutClose.addEventListener("click", () => {
+          hideLayoutOverlay();
+        });
+      }
+
+      if (layoutOverlay){
+        layoutOverlay.addEventListener("pointerdown", (e) => {
+          if (e.target === layoutOverlay){
+            hideLayoutOverlay();
+          }
+        });
+      }
+
+      if (layoutList){
+        layoutList.addEventListener("click", (e) => {
+          const btn = e.target.closest("button[data-layout]");
+          if (!btn) return;
+          const kind = btn.getAttribute("data-layout");
+          applyNamedLayout(kind);
+          hideLayoutOverlay();
+        });
+      }
+
+
+
+      function autoGraphLayout(opts = {}){
+        if (!nodes.length) {
+          setStatus("No nodes to layout");
+          return;
+        }
+
+        const direction = opts.direction || "down"; // "down" | "up" | "right" | "left"
+        const rootLabel = (opts.rootLabel || "").trim().toLowerCase();
+
+        const nodeById = new Map(nodes.map(n => [n.id, n]));
+        const children = new Map();
+        const parentCount = new Map();
+
+        // Build child / parent maps from links
+        links.forEach(l => {
+          if (!children.has(l.from)) children.set(l.from, []);
+          children.get(l.from).push(l.to);
+          parentCount.set(l.to, (parentCount.get(l.to) || 0) + 1);
+        });
+
+        // Choose root node
+        let root = null;
+        if (rootLabel) {
+          const exact = nodes.find(n => n.label.toLowerCase() === rootLabel);
+          const prefix = nodes.find(n => n.label.toLowerCase().startsWith(rootLabel));
+          root = exact || prefix || null;
+        }
+        if (!root) {
+          root = nodes.find(n => !parentCount.has(n.id)) || nodes[0];
+        }
+
+        // Depth (generation) from the root
+        const depth = new Map();
+
+
+        function dfsDepth(id, d){
+          const cur = depth.get(id);
+          // stop if this node was already reached at a *shallower* depth
+          if (cur !== undefined && d >= cur) return;
+          depth.set(id, d);
+          const kids = children.get(id) || [];
+          kids.forEach(k => dfsDepth(k, d + 1));
+        }
+
+        
+        dfsDepth(root.id, 0);
+
+        // X index (leaf ordering) so that parents are centered above children
+        const posIndex = new Map();
+        let cursor = 0;
+
+        function assignIndex(id){
+          if (posIndex.has(id)) return;
+          const kids = children.get(id) || [];
+          if (!kids.length){
+            posIndex.set(id, cursor++);
+            return;
+          }
+          kids.forEach(assignIndex);
+          const xs = kids.map(k => posIndex.get(k));
+          const avg = xs.reduce((a,b)=>a+b,0) / xs.length;
+          posIndex.set(id, avg);
+        }
+        assignIndex(root.id);
+
+        // Ensure every disconnected node still gets depth/index
+        nodes.forEach(n => {
+          if (!depth.has(n.id)) depth.set(n.id, 0);
+          if (!posIndex.has(n.id)) posIndex.set(n.id, cursor++);
+        });
+
+        const indices = Array.from(posIndex.values());
+        const minIdx = Math.min.apply(null, indices);
+        const maxDepth = Math.max.apply(null, Array.from(depth.values()));
+
+        const hGap = opts.hSpacing || 140;
+        const vGap = opts.vSpacing || 90;
+        const margin = 80;
+
+        // Assign coordinates depending on direction
+        nodes.forEach(n => {
+          const d = depth.get(n.id);
+          const line = posIndex.get(n.id) - minIdx;
+          let x, y;
+
+          switch (direction) {
+            case "down":     // classic tree, root at top
+            default:
+              x = margin + line * hGap;
+              y = margin + d    * vGap;
+              break;
+            case "up":       // inverted tree, root at bottom
+              x = margin + line * hGap;
+              y = margin + (maxDepth - d) * vGap;
+              break;
+            case "right":    // tree grows left → right
+              x = margin + d    * vGap;
+              y = margin + line * hGap;
+              break;
+            case "left":     // tree grows right → left
+              x = margin + (maxDepth - d) * vGap;
+              y = margin + line * hGap;
+              break;
+            }
+
+            n.x = x;
+            n.y = y;
+          });
+
+        renderAll();
+        pushAction({
+          type: "APPLY_LAYOUT",
+          at: Date.now(),
+          direction,
+          rootLabel: root.label
+        });
+
+        // Center nicely
+        zoomToFit();
+        setStatus(`Layout "${direction}" applied from root "${root.label}"`);
+      }
+
+      function applyNamedLayout(kind){
+        if (!nodes.length) {
+          setStatus("No nodes to layout");
+          return;
+        }
+        switch (kind) {
+        case "tree-up":
+          autoGraphLayout({ direction: "up" });
+          break;
+        case "tree-right":
+          autoGraphLayout({ direction: "right" });
+          break;
+        case "tree-left":
+          autoGraphLayout({ direction: "left" });
+          break;
+        case "tree-down":
+        default:
+          autoGraphLayout({ direction: "down" });
+          break;
+        }
+      }
 
 
 
       function setStatus(text){ statusEl.textContent = text; }
+
+
+      let dialogResolve = null;
+
+      function closeDialog(){
+        dialogOverlay.style.display = "none";
+        dialogResolve = null;
+      }
+
+      function openDialog(opts){
+        dialogTitle.textContent = opts.title || "";
+        dialogMessage.textContent = opts.message || "";
+        if (opts.showInput){
+          dialogInput.style.display = "block";
+          dialogInput.value = opts.defaultValue || "";
+          setTimeout(()=>{
+            dialogInput.focus();
+            dialogInput.select();
+          }, 0);
+        } else {
+          dialogInput.style.display = "none";
+          dialogInput.value = "";
+        }
+        dialogOk.textContent = opts.okText || "OK";
+        dialogCancel.textContent = opts.cancelText || "Cancel";
+        dialogOverlay.style.display = "flex";
+
+        return new Promise(resolve=>{
+          dialogResolve = resolve;
+        });
+      }
+
+      function confirmDialog(message, title){
+        return openDialog({
+          title: title || "Confirm",
+          message,
+          showInput: false
+        });
+      }
+
+      function promptDialog(message, defaultValue, title){
+        return openDialog({
+          title: title || "Input",
+          message,
+          showInput: true,
+          defaultValue
+        });
+      }
+
+      if (dialogCancel){
+        dialogCancel.addEventListener("click", ()=>{
+          if (dialogResolve) dialogResolve({ ok:false, value:null });
+          closeDialog();
+        });
+      }
+
+      if (dialogOk){
+        dialogOk.addEventListener("click", ()=>{
+          if (!dialogResolve){
+            closeDialog();
+            return;
+          }
+          const value = dialogInput.style.display === "none" ? null : dialogInput.value;
+          dialogResolve({ ok:true, value });
+          closeDialog();
+        });
+      }
+
+      if (dialogOverlay){
+        dialogOverlay.addEventListener("pointerdown", (e)=>{
+          if (e.target === dialogOverlay){
+            if (dialogResolve) dialogResolve({ ok:false, value:null });
+            closeDialog();
+          }
+        });
+      }
+
+      if (dialogInput){
+        dialogInput.addEventListener("keydown", (e)=>{
+          if (e.key === "Enter"){
+            e.preventDefault();
+            dialogOk.click();
+          } else if (e.key === "Escape"){
+            e.preventDefault();
+            dialogCancel.click();
+          }
+        });
+      }
+
+
+
+
+
+
+
+
+
+
+
 
       function showHoverDotAt(x, y){
         if (!hoverDot) return;
@@ -2472,31 +3084,118 @@
       });
 
 
-
-      hambMenu.addEventListener("click", (e)=>{
+      hambMenu.addEventListener("click", async (e)=>{
         const b = e.target.closest("button");
         if (!b) return;
 
         const act = b.getAttribute("data-mobile");
 
         if (act === "open") {
-          btnSwitch.click();
+          await refreshProjectList();
+          gateOn();
+          setStatus("Open project");
+
         } else if (act === "new") {
-          btnNew.click();
+          const res = await promptDialog("New project name:", "", "New project");
+          if (!res.ok) {
+            hambMenu.style.display = "none";
+            return;
+          }
+          const name = (res.value || "").trim();
+          if (!name) {
+            hambMenu.style.display = "none";
+            return;
+          }
+          try {
+            const p = await createProject(name);
+            await refreshProjectList();
+            await openProject(p);
+          } catch (err) {
+            setStatus("Create failed (name exists?)");
+          }
+
         } else if (act === "dup") {
-          btnDup.click();
+          if (!currentProject) {
+            setStatus("No project to duplicate");
+          } else {
+            const res = await promptDialog(
+          `Clone "${currentProject.name}" as:`,
+        `${currentProject.name} (copy)`,
+        "Clone project"
+        );
+            if (res.ok) {
+              const name = (res.value || "").trim();
+              if (name) {
+                await confirmSaveIfDirty();
+                try {
+                  const dup = await duplicateProject(currentProject.id, name);
+                  await refreshProjectList();
+                  await openProject(dup);
+                  setStatus(`Cloned as "${dup.name}"`);
+                } catch (err) {
+                  setStatus("Clone failed (name exists?)");
+                }
+              }
+            }
+          }
+
         } else if (act === "del") {
-          btnDel.click();
+          if (currentProject) {
+            const res = await confirmDialog(
+          `Delete project "${currentProject.name}"?\n\nThis cannot be undone.`,
+          "Delete project"
+          );
+            if (res.ok) {
+              await deleteProject(currentProject.id);
+              await refreshProjectList();
+              gateOn();
+            }
+          }
+
         } else if (act === "save") {
-          btnSave.click();
+          await persistSnapshot();
+
+        } else if (act === "clear-lines") {
+          if (!currentProject) {
+            setStatus("Create/open a project first");
+          } else if (!links.length) {
+            setStatus("No lines to clear");
+          } else {
+            const res = await confirmDialog(
+              "Remove all connections between nodes in this project?\n\nNodes will stay where they are.",
+              "Clear lines"
+              );
+            if (res.ok) clearLinksOnlyWrapped();
+          }
+
+        } else if (act === "clear-all") {
+          if (!currentProject) {
+            setStatus("Create/open a project first");
+          } else if (!nodes.length && !links.length) {
+            setStatus("Nothing to clear");
+          } else {
+            const res = await confirmDialog(
+              "Clear all nodes and connections in this project?\n\nYou can still Undo while this session stays open.",
+              "Clear all"
+              );
+            if (res.ok) clearAllNodesAndLinksWrapped();
+          }
+
         } else if (act === "hint") {
           btnHelp.click();
+
         } else if (act === "config") {
           showConfigOverlay();
+
+        } else if (act === "layouts") {
+          showLayoutOverlay();
         }
 
         hambMenu.style.display = "none";
       });
+
+
+
 
 
 
@@ -2666,6 +3365,9 @@
         });
       }
 
+
+
+
       listEl.addEventListener("click", async (e) => {
         const btn = e.target.closest("button[data-open],button[data-dup],button[data-del]");
         if (!btn) return;
@@ -2683,18 +3385,21 @@
 
         // Clone
         if (btn.dataset.dup !== undefined) {
+          const res = await promptDialog(
+        `Name for the duplicate of "${proj.name}":`,
+      `${proj.name} (copy)`,
+      "Clone project"
+      );
+          if (!res.ok) return;
+          const name = (res.value || "").trim();
+          if (!name) return;
+
           if (currentProject && proj.id === currentProject.id) {
             await confirmSaveIfDirty();
           }
 
-          const name = prompt(
-        `Name for the duplicate of "${proj.name}":`,
-      `${proj.name} (copy)`
-      );
-          if (!name || !name.trim()) return;
-
           try {
-            const dup = await duplicateProject(proj.id, name.trim());
+            const dup = await duplicateProject(proj.id, name);
             await refreshProjectList();
             await openProject(dup);
             setStatus(`Cloned as "${dup.name}"`);
@@ -2707,10 +3412,11 @@
 
         // Delete
         if (btn.dataset.del !== undefined) {
-          const ok = confirm(
-        `Delete project "${proj.name}"?\n\nThis cannot be undone.\n\nSure / No`
+          const res = await confirmDialog(
+        `Delete project "${proj.name}"?\n\nThis cannot be undone.`,
+        "Delete project"
         );
-          if (!ok) return;
+          if (!res.ok) return;
 
           await deleteProject(proj.id);
           await refreshProjectList();
@@ -2718,6 +3424,7 @@
           return;
         }
       });
+
 
 
 
@@ -2764,10 +3471,13 @@
       btnDup.addEventListener("click", async ()=>{
         if (!currentProject) { setStatus("No project to duplicate"); return; }
 
-        await confirmSaveIfDirty();
-
-        const name = prompt(`Clone "${currentProject.name}" as:`); 
+        const name = prompt(
+      `Clone "${currentProject.name}" as:`,
+    `${currentProject.name} (copy)`
+    );
         if (!name || !name.trim()) return;
+
+        await confirmSaveIfDirty();
 
         try {
           const dup = await duplicateProject(currentProject.id, name.trim());
@@ -2778,6 +3488,8 @@
           setStatus("Clone failed (name exists?)");
         }
       });
+
+
 
 
       btnDel.addEventListener("click", async ()=>{
@@ -2795,6 +3507,49 @@
       btnRedo.addEventListener("click", doRedo);
       btnSave.addEventListener("click", persistSnapshot);
 
+
+
+      // NEW: topbar Clear Lines
+      if (btnClearLines) {
+        btnClearLines.addEventListener("click", () => {
+          if (!currentProject) {
+            setStatus("Create/open a project first");
+            return;
+          }
+          if (!links.length) {
+            setStatus("No lines to clear");
+            return;
+          }
+          const ok = confirm(
+            "Remove all connections between nodes in this project?\n\nNodes will stay where they are."
+            );
+          if (!ok) return;
+          clearLinksOnlyWrapped();
+        });
+      }
+
+      // NEW: topbar Clear (nodes + lines)
+      if (btnClear) {
+        btnClear.addEventListener("click", () => {
+          if (!currentProject) {
+            setStatus("Create/open a project first");
+            return;
+          }
+          if (!nodes.length && !links.length) {
+            setStatus("Nothing to clear");
+            return;
+          }
+          const ok = confirm(
+            "Clear all nodes and connections in this project?\n\nYou can still Undo while this session stays open."
+            );
+          if (!ok) return;
+          clearAllNodesAndLinksWrapped();
+        });
+      }
+
+
+
+
       function clearGraph(){
         nodes = [];
         links = [];
@@ -2803,6 +3558,32 @@
         renderAll();
         projLabel.textContent = "—";
       }
+
+      function clearLinksOnlyWrapped(){
+        if (!links.length) {
+          setStatus("No lines to clear");
+          return;
+        }
+        links = [];
+        renderLinks();
+        pushAction({ type: "CLEAR_LINKS", at: Date.now() });
+        setStatus("All connections cleared (nodes kept)");
+      }
+
+      function clearAllNodesAndLinksWrapped(){
+        if (!nodes.length && !links.length) {
+          setStatus("Nothing to clear");
+          return;
+        }
+        nodes = [];
+        links = [];
+        nextId = 1;
+        selectedNodeId = null;
+        renderAll();
+        pushAction({ type: "CLEAR_ALL", at: Date.now() });
+        setStatus("All nodes and connections cleared");
+      }
+
 
 
       /* Config */
