@@ -756,6 +756,30 @@
   justify-content:center;
 }
 
+#info-tooltip{
+  position:absolute;
+  max-width:260px;
+  padding:8px 10px;
+  background:var(--menu-bg);
+  border:1px solid var(--menu-border);
+  border-radius:10px;
+  box-shadow:0 10px 30px var(--shadow);
+  font-size:13px;
+  line-height:1.4;
+  pointer-events:none;
+  z-index:60;
+  display:none;
+}
+
+#info-tooltip::after{
+  content:"";
+  position:absolute;
+  left:16px;
+  bottom:-6px;
+  border-width:6px 6px 0 6px;
+  border-style:solid;
+  border-color:var(--menu-bg) transparent transparent transparent;
+}
 
 
 
@@ -912,6 +936,9 @@
       <button id="zoom-fit"   class="btn" title="Fit all nodes">⤢</button>
     </div>
 
+    <div id="info-tooltip"></div>
+
+
     <svg id="canvas">
       <g id="links-layer"></g>
       <line id="temp-link" x1="0" y1="0" x2="0" y2="0"></line>
@@ -1024,6 +1051,7 @@
     <div id="tool-rail">
       <button id="tool-lines"  class="tool" title="Lines mode"><span class="lbl">Lines</span></button>
       <button id="tool-edit"   class="tool" title="Edit mode"><span class="lbl">Edit</span></button>
+      <button id="tool-info"   class="tool" title="Info mode"><span class="lbl">Info</span></button>
       <button id="tool-break"  class="tool" title="Break lines"><span class="lbl">Break</span></button>
       <button id="tool-delete" class="tool" title="Delete mode"><span class="lbl">Delete</span></button>
     </div>
@@ -1102,6 +1130,7 @@
       const toolEdit  = document.getElementById("tool-edit");
       const toolBreak  = document.getElementById("tool-break");
       const toolDelete= document.getElementById("tool-delete");
+      const toolInfo   = document.getElementById("tool-info");       
 
 
       const btnConfig = document.getElementById("btn-config");
@@ -1135,6 +1164,10 @@
       const layoutList     = document.getElementById("layout-list");
 
       const btnLayouts     = document.getElementById("btn-layouts");
+
+
+      const infoTooltip = document.getElementById("info-tooltip");
+
 
 
 
@@ -1185,6 +1218,8 @@
       let editMode  = false;   // tap opens node context menu
       let deleteMode= false;   // tap deletes node
       let breakMode  = false; 
+      let infoMode   = false;
+
       let chainFrom = null;    // last node tapped in linesMode
       let tapMoved  = false;   // tracks movement to distinguish drag vs tap
       let touchPanActive = false;
@@ -1223,8 +1258,10 @@
 
       function updateViewBox() {
         svg.setAttribute("viewBox", `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
+        if (infoMode && lastHoverNode) {
+          showInfoTooltipForNode(lastHoverNode);
+        }
       }
-
 
       function resetZoomTo100(){
         const rect = svg.getBoundingClientRect();
@@ -1248,6 +1285,38 @@
       }
 
 
+      function hideInfoTooltip(){
+        if (!infoTooltip) return;
+        infoTooltip.style.display = "none";
+      }
+
+      function showInfoTooltipForNode(node){
+        if (!infoTooltip || !infoMode) return;
+
+        const text = (node.description || "").trim();
+        if (!text){
+          hideInfoTooltip();
+          return;
+        }
+
+        infoTooltip.textContent = text;
+        infoTooltip.style.display = "block";
+
+        // node.x / node.y (SVG) → screen → wrapper coords
+        const pt = svg.createSVGPoint();
+        pt.x = node.x;
+        pt.y = node.y;
+        const screen = pt.matrixTransform(svg.getScreenCTM());
+
+        const wrapperRect = wrapper.getBoundingClientRect();
+        const tooltipRect = infoTooltip.getBoundingClientRect();
+
+        const x = screen.x - wrapperRect.left - tooltipRect.width / 2;
+        const y = screen.y - wrapperRect.top  - tooltipRect.height - 16;
+
+        infoTooltip.style.left = `${Math.round(x)}px`;
+        infoTooltip.style.top  = `${Math.round(y)}px`;
+      }
 
       function getNodesBounds(){
         if (!nodes.length) return null;
@@ -2357,25 +2426,35 @@ function renderNodes() {
     g.appendChild(text);
     nodesLayer.appendChild(g);
 
-    g.addEventListener("pointerenter", ()=>{ lastHoverNode = node; });
-    g.addEventListener("pointerleave", ()=>{ if (lastHoverNode && lastHoverNode.id===node.id) lastHoverNode=null; });
+    g.addEventListener("pointerenter", () => {
+      lastHoverNode = node;
+      if (infoMode) {
+        showInfoTooltipForNode(node);
+      }
+    });
 
-    g.addEventListener("pointerdown", (e)=>onNodePointerDown(e, node));
-    g.addEventListener("contextmenu", (e)=>openMenu(e, node));
-    g.addEventListener("pointerdown", (e)=>startPressTimer(e, node));
-    g.addEventListener("pointerup", cancelPressTimer, { passive:true });
-    g.addEventListener("pointerleave", cancelPressTimer, { passive:true });
+    g.addEventListener("pointerleave", () => {
+      if (lastHoverNode && lastHoverNode.id === node.id) lastHoverNode = null;
+      hideInfoTooltip();
+    });
 
-          /* Mobile taps and two-finger menu */
-    g.addEventListener("pointerdown", ()=>{ tapMoved=false; });
-    g.addEventListener("pointermove", ()=>{ tapMoved=true; });
-    g.addEventListener("pointerup", (e)=> handleNodePointerUp(e, node), { passive:true });
-    g.addEventListener("touchstart", (e)=> maybeTwoFingerMenu(e, node), { passive:false });
-    g.addEventListener("touchend", clearTwoFingerTimer, { passive:true });
-    g.addEventListener("touchmove", clearTwoFingerTimer, { passive:true });
+    g.addEventListener("pointerdown", (e) => onNodePointerDown(e, node));
+    g.addEventListener("contextmenu", (e) => openMenu(e, node));
+    g.addEventListener("pointerdown", (e) => startPressTimer(e, node));
+    g.addEventListener("pointerup", cancelPressTimer, { passive: true });
+    g.addEventListener("pointerleave", cancelPressTimer, { passive: true });
+
+    /* Mobile taps and two-finger menu */
+    g.addEventListener("pointerdown", () => { tapMoved = false; });
+    g.addEventListener("pointermove", () => { tapMoved = true; });
+    g.addEventListener("pointerup", (e) => handleNodePointerUp(e, node), { passive: true });
+    g.addEventListener("touchstart", (e) => maybeTwoFingerMenu(e, node), { passive: false });
+    g.addEventListener("touchend", clearTwoFingerTimer, { passive: true });
+    g.addEventListener("touchmove", clearTwoFingerTimer, { passive: true });
   });
   setStatus(`Nodes: ${nodes.length} | Links: ${links.length}`);
 }
+
 
 function renderLinks() {
   linksLayer.innerHTML = "";
@@ -2663,6 +2742,8 @@ function onCanvasPointerMove(e){
 
     selectedNodeId = node.id;
     updateNodeGraphics();
+
+    hideInfoTooltip();
 
     setStatus(`Dragging ${node.label}`);
   }
@@ -3334,7 +3415,26 @@ let pinchStartViewBox = { x: 0, y: 0, w: 0, h: 0 };
         toolEdit.classList.toggle("active",   editMode);
         toolBreak.classList.toggle("active",  breakMode);
         toolDelete.classList.toggle("active", deleteMode);
+        toolInfo.classList.toggle("active",   infoMode);
       }
+
+      toolInfo.addEventListener("click", () => {
+        infoMode = !infoMode;
+        if (infoMode){
+          linesMode  = false;
+          editMode   = false;
+          breakMode  = false;
+          deleteMode = false;
+          chainFrom  = null;
+        } else {
+          hideInfoTooltip();
+        }
+        syncToolButtons();
+        setStatus(infoMode
+          ? "Info mode: hover nodes to see descriptions"
+          : "Info mode off"
+          );
+      });
 
       toolLines.addEventListener("click", ()=>{
         linesMode = !linesMode;
@@ -3342,7 +3442,9 @@ let pinchStartViewBox = { x: 0, y: 0, w: 0, h: 0 };
           editMode   = false;
           breakMode  = false;
           deleteMode = false;
+          infoMode   = false;   // <—
           chainFrom  = null;
+          hideInfoTooltip();
         } else {
           chainFrom = null;
         }
@@ -3356,7 +3458,9 @@ let pinchStartViewBox = { x: 0, y: 0, w: 0, h: 0 };
           linesMode  = false;
           breakMode  = false;
           deleteMode = false;
+          infoMode   = false;   // <—
           chainFrom  = null;
+          hideInfoTooltip();
         }
         syncToolButtons();
         setStatus(editMode ? "Edit mode: tap a node for menu" : "Edit mode off");
@@ -3368,7 +3472,9 @@ let pinchStartViewBox = { x: 0, y: 0, w: 0, h: 0 };
           linesMode  = false;
           editMode   = false;
           deleteMode = false;
+          infoMode   = false;   // <—
           chainFrom  = null;
+          hideInfoTooltip();
         }
         syncToolButtons();
         setStatus(breakMode ? "Break mode: tap near a line to remove it" : "Break mode off");
@@ -3380,11 +3486,14 @@ let pinchStartViewBox = { x: 0, y: 0, w: 0, h: 0 };
           linesMode  = false;
           editMode   = false;
           breakMode  = false;
+          infoMode   = false;   // <—
           chainFrom  = null;
+          hideInfoTooltip();
         }
         syncToolButtons();
         setStatus(deleteMode ? "Delete mode: tap a node to remove" : "Delete mode off");
       });
+
 
       syncToolButtons();
 
