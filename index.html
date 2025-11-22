@@ -11,8 +11,6 @@
   <title>Node Editor — projects, persistence, history (IndexedDB)</title>
 
 
-
-
   <style>
     /* Base + mobile hygiene */
     * { box-sizing: border-box; margin:0; padding:0; }
@@ -738,8 +736,11 @@
     <div id="tool-rail">
       <button id="tool-lines"  class="tool" title="Lines mode"><span class="lbl">Lines</span></button>
       <button id="tool-edit"   class="tool" title="Edit mode"><span class="lbl">Edit</span></button>
+      <button id="tool-break"  class="tool" title="Break lines"><span class="lbl">Break</span></button>
       <button id="tool-delete" class="tool" title="Delete mode"><span class="lbl">Delete</span></button>
     </div>
+
+
   </div>
 
   <script>
@@ -805,6 +806,7 @@
 
       const toolLines = document.getElementById("tool-lines");
       const toolEdit  = document.getElementById("tool-edit");
+      const toolBreak  = document.getElementById("tool-break");
       const toolDelete= document.getElementById("tool-delete");
 
 
@@ -871,6 +873,7 @@
       let linesMode = false;   // tap sequence of nodes to chain-connect
       let editMode  = false;   // tap opens node context menu
       let deleteMode= false;   // tap deletes node
+      let breakMode  = false; 
       let chainFrom = null;    // last node tapped in linesMode
       let tapMoved  = false;   // tracks movement to distinguish drag vs tap
       let touchPanActive = false;
@@ -1182,6 +1185,27 @@
         setStatus(`Inserted node between ${best.from.label} and ${best.to.label}`);
         return true;
       }
+
+      function deleteNearestLinkAt(px, py){
+        const best = findNearestLinkPoint(px, py, { maxDist: 24 });
+        if (!best) return false;
+
+        links = links.filter(l => l !== best.link);
+        renderLinks();
+
+        pushAction({
+          type: "DELETE_LINK",
+          at: Date.now(),
+          from: best.link.from,
+          to:   best.link.to
+        });
+
+        hideHoverDot();
+        setStatus(`Removed link ${best.from.label} → ${best.to.label}`);
+        return true;
+      }
+
+
 
       // reuse splitting logic when dropping an existing node onto a link
       function splitExistingLinkWithNode(node, best){
@@ -1792,45 +1816,74 @@
       });
 
       // ----- Pointer-based drag/move -----
-      function startPressTimer(e, node){
-        if (linkingFrom) return;
-        cancelPressTimer();
-        downX = e.clientX; downY = e.clientY;
-        pressTimer = setTimeout(()=>{ openMenu(e, node); }, LONG_PRESS_MS);
-      }
 
       function cancelPressTimer(){
         if (pressTimer){ clearTimeout(pressTimer); pressTimer=null; }
       }
 
+
+
+
+      function startPressTimer(e, node){
+        // still block long-press menu while linking or in Delete mode
+        if (linkingFrom || deleteMode) return;
+        cancelPressTimer();
+        downX = e.clientX; 
+        downY = e.clientY;
+        pressTimer = setTimeout(()=>{ openMenu(e, node); }, LONG_PRESS_MS);
+      }
+
+
+      
+
       function onNodePointerDown(e, node){
-        if (!currentProject){ gateOn(); return; }
+        if (!currentProject){ 
+          gateOn(); 
+          return; 
+        }
 
         // Right-click → open menu immediately
         if (e.button === 2){
           openMenu(e, node);
           return;
         }
-        // Ignore middle button (used for pan on background)
+        // Ignore middle button
         if (e.button === 1) return;
+
+        // Delete mode: immediate remove on primary click
+        if (deleteMode && e.button === 0){
+          e.preventDefault();
+          e.stopPropagation();
+          cancelPressTimer();
+          deleteNodeWrapped(node);
+          return;
+        }
 
         // If currently linking and a node is pressed, finish the connection.
         if (linkingFrom){
           e.preventDefault();
-          if (node.id !== linkingFrom.id) { connectNodesWrapped(linkingFrom.id, node.id); }
+          if (node.id !== linkingFrom.id) { 
+            connectNodesWrapped(linkingFrom.id, node.id); 
+          }
           cancelLinking();
           return;
         }
 
+        // Normal drag path (allowed even in Lines/Edit/Break)
         e.preventDefault();
         e.stopPropagation();
 
         dragCandidate = { node, pointerId: e.pointerId };
 
-        svg.setPointerCapture(e.pointerId);
+        // IMPORTANT: no setPointerCapture here, so pointerup still
+        // bubbles through the node and handleNodePointerUp will fire
+        // for simple taps (Lines/Edit modes).
         svg.addEventListener("pointermove", onCanvasPointerMove);
         svg.addEventListener("pointerup", onCanvasPointerUp, { once:true });
       }
+
+
+
 
       function onCanvasPointerMove(e){
         if (pressTimer && dist(e.clientX,e.clientY,downX,downY) > DRAG_MENU_CANCEL_PX) {
@@ -2130,7 +2183,16 @@
           return;
         }
 
+
+
         const p = svgPoint(e);
+
+        // Break mode: tapping near a line removes that link instead of adding a node
+        if (breakMode) {
+          deleteNearestLinkAt(p.x, p.y);
+          bgTapCandidate = null;
+          return;
+        }
 
         // 1) first try: insert node on an existing link (gateway)
         if (insertNodeOnNearestLink(p.x, p.y)){
@@ -2145,6 +2207,9 @@
         }
 
         bgTapCandidate = null;
+
+
+
       }
 
 
@@ -2407,31 +2472,63 @@
       });
 
 
-      // Tool rail: Lines/Edit/Delete modes
       function syncToolButtons(){
         toolLines.classList.toggle("active",  linesMode);
         toolEdit.classList.toggle("active",   editMode);
+        toolBreak.classList.toggle("active",  breakMode);
         toolDelete.classList.toggle("active", deleteMode);
       }
+
       toolLines.addEventListener("click", ()=>{
         linesMode = !linesMode;
-        if (!linesMode) chainFrom = null;
-        if (linesMode){ editMode=false; deleteMode=false; }
+        if (linesMode){
+          editMode   = false;
+          breakMode  = false;
+          deleteMode = false;
+          chainFrom  = null;
+        } else {
+          chainFrom = null;
+        }
         syncToolButtons();
         setStatus(linesMode ? "Lines mode: tap nodes to chain" : "Lines mode off");
       });
+
       toolEdit.addEventListener("click", ()=>{
         editMode = !editMode;
-        if (editMode){ linesMode=false; chainFrom=null; deleteMode=false; }
+        if (editMode){
+          linesMode  = false;
+          breakMode  = false;
+          deleteMode = false;
+          chainFrom  = null;
+        }
         syncToolButtons();
         setStatus(editMode ? "Edit mode: tap a node for menu" : "Edit mode off");
       });
+
+      toolBreak.addEventListener("click", ()=>{
+        breakMode = !breakMode;
+        if (breakMode){
+          linesMode  = false;
+          editMode   = false;
+          deleteMode = false;
+          chainFrom  = null;
+        }
+        syncToolButtons();
+        setStatus(breakMode ? "Break mode: tap near a line to remove it" : "Break mode off");
+      });
+
       toolDelete.addEventListener("click", ()=>{
         deleteMode = !deleteMode;
-        if (deleteMode){ linesMode=false; chainFrom=null; editMode=false; }
+        if (deleteMode){
+          linesMode  = false;
+          editMode   = false;
+          breakMode  = false;
+          chainFrom  = null;
+        }
         syncToolButtons();
         setStatus(deleteMode ? "Delete mode: tap a node to remove" : "Delete mode off");
       });
+
       syncToolButtons();
 
       // Node tap handler for Lines/Edit/Delete modes
@@ -2632,7 +2729,7 @@
         }
       });
 
-      
+
       btnDel.addEventListener("click", async ()=>{
         if (!currentProject) return;
         const ok = confirm(`Delete project "${currentProject.name}"? This cannot be undone.`); if (!ok) return;
@@ -3083,7 +3180,6 @@
 
 
     })();
-
 
 
   </script>
