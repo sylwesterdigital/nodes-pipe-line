@@ -5,6 +5,8 @@ archive/
 *.psd
 .DS_Store
 
+*.sh
+
 
 # Logs
 logs
