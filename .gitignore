@@ -1,3 +1,11 @@
+archive/
+*.mp4
+*.mkv
+*.mov
+*.psd
+.DS_Store
+
+
 # Logs
 logs
 *.log
