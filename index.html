@@ -1783,6 +1783,25 @@
         const mod = e.ctrlKey || e.metaKey;
         const k = e.key.toLowerCase();
 
+        const rawKey = e.key;
+
+        // Zoom via +/- keys (no modifiers)
+        if (!mod) {
+          // Zoom in: + key (usually Shift + =)
+          if (rawKey === '+' || (rawKey === '=' && e.shiftKey)) {
+            e.preventDefault();
+            applyZoomFactor(ZOOM_STEP);
+            return;
+          }
+          // Zoom out: - / _ keys
+          if (rawKey === '-' || rawKey === '_') {
+            e.preventDefault();
+            applyZoomFactor(1 / ZOOM_STEP);
+            return;
+          }
+        }
+
+
 
         if (mod && k==="s"){ e.preventDefault(); await persistSnapshot(); return; }
         if (mod && k==="z"){ e.preventDefault(); await doUndo(); return; }
@@ -1803,6 +1822,37 @@
           cancelLinking();
           return;
         }
+
+
+        // Toggle Lines mode with "l"
+        if (!mod && !e.shiftKey && k === "l") {
+          e.preventDefault();
+          toolLines.click();
+          return;
+        }
+
+        // Toggle Edit mode with "e"
+        if (!mod && !e.shiftKey && k === "e") {
+          e.preventDefault();
+          toolEdit.click();
+          return;
+        }
+
+        // Toggle Break mode with "b"
+        if (!mod && !e.shiftKey && k === "b") {
+          e.preventDefault();
+          toolBreak.click();
+          return;
+        }
+
+        // Toggle Delete tool mode with "d"
+        // (no Shift so Shift+D still works as duplicate)
+        if (!mod && !e.shiftKey && k === "d") {
+          e.preventDefault();
+          toolDelete.click();
+          return;
+        }
+
 
         if (!currentProject) return;
         if (k==="n"){
@@ -1834,7 +1884,7 @@
       }
 
 
-      
+
 
       function onNodePointerDown(e, node){
         if (!currentProject){ 
