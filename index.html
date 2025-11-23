@@ -2424,7 +2424,8 @@ function restyleNodeWrapped(node, patch){
   pushAction({type:"STYLE_NODE", at:Date.now(), id:node.id, patch});
 }
 
-      // ----- Rendering -----
+
+// ----- Rendering -----
 function renderNodes() {
   nodesLayer.innerHTML = "";
   nodes.forEach(node => {
@@ -4113,362 +4114,413 @@ let pinchStartViewBox = { x: 0, y: 0, w: 0, h: 0 };
         }
       }
 
+
+
       async function importBackupData(data, mode){
         console.log("[config] importBackupData: start", { mode });
-        if (!data || !Array.isArray(data.projects) || !Array.isArray(data.states) || !Array.isArray(data.history)){
+        if (
+          !data ||
+          !Array.isArray(data.projects) ||
+          !Array.isArray(data.states) ||
+          !Array.isArray(data.history)
+          ){
           alert("Backup file format not recognized.");
-          console.log("[config] importBackupData: invalid format");
-          return;
-        }
-
-        const confirmMsg = mode === "merge"
-        ? "Import and merge this data with existing projects?"
-        : "Replace ALL existing data with this backup? This cannot be undone.";
-        const ok = confirm(confirmMsg);
-        if (!ok) {
-          console.log("[config] importBackupData: user cancelled");
-          return;
-        }
-
-        if (mode === "replace"){
-          if (db){
-            db.close();
-            db = null;
-          }
-          await new Promise((res, rej) => {
-            const req = indexedDB.deleteDatabase(DB_NAME);
-            req.onsuccess = () => res();
-            req.onerror   = () => rej(req.error);
-            req.onblocked = () => res();
-          });
-          db = await openDB();
-          console.log("[config] importBackupData: existing db cleared and reopened");
-        } else {
-          if (!db) db = await openDB();
-        }
-
-        const importedProjects = data.projects || [];
-        const importedStates   = data.states || [];
-        const importedHistory  = data.history || [];
-
-        const idMap = new Map();
-        let offset = 0;
-
-        if (mode === "merge"){
-          const existing = await listProjects();
-          let maxId = 0;
-          existing.forEach(p => {
-            if (typeof p.id === "number" && p.id > maxId) maxId = p.id;
-          });
-          offset = maxId;
-          console.log("[config] importBackupData: merge offset", offset);
-        }
-
-        await new Promise((res, rej) => {
-          const t = tx(["projects","states","history"], "readwrite");
-          const projStore = t.objectStore("projects");
-          const stateStore= t.objectStore("states");
-          const histStore = t.objectStore("history");
-
-          if (mode === "replace"){
-            projStore.clear();
-            stateStore.clear();
-            histStore.clear();
-          }
-
-          importedProjects.forEach(p => {
-            const oldId = p.id;
-            const newId = mode === "merge" ? (oldId + offset) : oldId;
-            idMap.set(oldId, newId);
-            const rec = { ...p, id:newId };
-            projStore.put(rec);
-          });
-
-          importedStates.forEach(s => {
-            const oldPid = s.projectId;
-            if (oldPid == null) return;
-            const newPid = mode === "merge"
-            ? (idMap.get(oldPid) ?? (oldPid + offset))
-            : oldPid;
-            if (mode === "merge" && !idMap.has(oldPid)){
-              idMap.set(oldPid, newPid);
-            }
-            const rec = { ...s, projectId:newPid };
-            stateStore.put(rec);
-          });
-
-          importedHistory.forEach(h => {
-            const oldPid = h.projectId;
-            if (oldPid == null) return;
-            const newPid = mode === "merge"
-            ? (idMap.get(oldPid) ?? (oldPid + offset))
-            : oldPid;
-            const rec = { ...h, projectId:newPid };
-            histStore.put(rec);
-          });
-
-          t.oncomplete = () => res();
-          t.onerror    = () => rej(t.error);
-        });
-
-        await refreshProjectList();
-        gateOn();
-        clearGraph();
-        setStatus("Import complete");
-        console.log("[config] importBackupData: completed", { mode });
+        console.log("[config] importBackupData: invalid format");
+        return;
       }
 
-      if (configImportRun && configImportFile) {
-        configImportRun.addEventListener("click", () => {
-          console.log("[config] Import button clicked");
-          const file = configImportFile.files && configImportFile.files[0];
-          if (!file) {
-            console.log("[config] Import: no file selected, opening picker");
-            configImportFile.click();
-            return;
-          }
-          runImportFromFile();
-        });
-
-        configImportFile.addEventListener("change", () => {
-          const file = configImportFile.files && configImportFile.files[0];
-          if (!file) return;
-          console.log("[config] File chosen via picker, running import");
-          runImportFromFile();
-        });
-
-        async function runImportFromFile() {
-          const file = configImportFile.files && configImportFile.files[0];
-          if (!file) {
-            console.log("[config] runImportFromFile: no file present");
-            return;
-          }
-
-          let mode = "replace";
-          const modeInput = document.querySelector('input[name="import-mode"]:checked');
-          if (modeInput) mode = modeInput.value;
-
-          try {
-            const text = await file.text();
-            const data = JSON.parse(text);
-            await importBackupData(data, mode);
-          } catch (e) {
-            console.error("[config] Import: failed to import backup", e);
-            alert("Failed to import backup.");
-          } finally {
-            configImportFile.value = "";
-          }
-        }
+      const confirmMsg = mode === "merge"
+      ? "Import and merge this data with existing projects?"
+      : "Replace ALL existing data with this backup? This cannot be undone.";
+      const ok = confirm(confirmMsg);
+      if (!ok) {
+        console.log("[config] importBackupData: user cancelled");
+        return;
       }
 
-      if (configDbRefresh) {
-        configDbRefresh.addEventListener("click", () => {
-          console.log("[config] Recalculate size clicked");
-          refreshDbSizeLabel();
-        });
-      }
-
-      if (configDbClear) {
-        configDbClear.addEventListener("click", () => {
-          console.log("[config] Clear database clicked");
-          clearIndexedDB();
-        });
-      }
-
-      if (configExportBtn) {
-        configExportBtn.addEventListener("click", () => {
-          console.log("[config] Export data clicked");
-          exportAllData();
-        });
-      }
-
-      if (configThemeToggle) {
-        configThemeToggle.addEventListener("click", () => {
-          const root = document.documentElement;
-          const current = root.dataset.theme === "light" ? "light" : "dark";
-          const next = current === "light" ? "dark" : "light";
-          console.log("[config] Theme toggle clicked", { current, next });
-          applyTheme(next);
-          try {
-            localStorage.setItem(THEME_KEY, next);
-          } catch (err) {
-            console.warn("[config] Theme toggle: failed to persist theme", err);
-          }
-        });
-      }
-
-      function clearIndexedDB(){
-        console.log("[config] clearIndexedDB: start");
-        const ok = confirm("Clear all Node Canvas data from this browser? This cannot be undone.");
-        if (!ok) {
-          console.log("[config] clearIndexedDB: user cancelled");
-          return;
-        }
+      if (mode === "replace"){
         if (db){
           db.close();
           db = null;
         }
-        const req = indexedDB.deleteDatabase(DB_NAME);
-        req.onsuccess = () => {
-          setStatus("Database cleared");
-          console.log("[config] clearIndexedDB: success, reloading");
-          location.reload();
-        };
-        req.onerror = () => {
-          setStatus("Failed to clear database");
-          console.error("[config] clearIndexedDB: error", req.error);
-        };
-        req.onblocked = () => {
-          setStatus("Database clear blocked by another tab");
-          console.warn("[config] clearIndexedDB: blocked");
-        };
-      }
-
-      async function estimateDBSizeBytes(){
-        console.log("[config] estimateDBSizeBytes: start");
-        if (!db) {
-          console.log("[config] estimateDBSizeBytes: no db");
-          return 0;
-        }
-        const stores = ["projects","states","history"];
-        let total = 0;
-        for (const store of stores){
-          await new Promise((res, rej) => {
-            const t = tx([store]);
-            const s = t.objectStore(store);
-            const req = s.openCursor();
-            req.onsuccess = (e) => {
-              const cur = e.target.result;
-              if (cur){
-                try {
-                  total += JSON.stringify(cur.value).length;
-                } catch(_) {}
-                cur.continue();
-              } else {
-                res();
-              }
-            };
-            req.onerror = () => rej(req.error);
-          });
-        }
-        console.log("[config] estimateDBSizeBytes: done", { bytes: total });
-        return total;
-      }
-
-      async function refreshDbSizeLabel(){
-        if (!configDbSize) return;
-        configDbSize.textContent = "IndexedDB usage: calculating…";
-        try{
-          const bytes = await estimateDBSizeBytes();
-          let human;
-          if (bytes < 1024) human = `${bytes} B`;
-          else if (bytes < 1024*1024) human = `${(bytes/1024).toFixed(1)} KB`;
-          else human = `${(bytes/1024/1024).toFixed(2)} MB`;
-          configDbSize.textContent = `IndexedDB usage (approx.): ${human}`;
-          console.log("[config] refreshDbSizeLabel:", { bytes, human });
-        }catch(e){
-          configDbSize.textContent = "IndexedDB usage: n/a";
-          console.error("[config] refreshDbSizeLabel: error", e);
-        }
-      }
-
-      function showConfigOverlay(){
-        if (!configOverlay) {
-          console.warn("[config] showConfigOverlay: overlay missing");
-          return;
-        }
-        console.log("[config] showConfigOverlay");
-        configOverlay.style.display = "flex";
-        refreshDbSizeLabel();
-      }
-
-      function hideConfigOverlay(){
-        if (!configOverlay) return;
-        console.log("[config] hideConfigOverlay");
-        configOverlay.style.display = "none";
-      }
-
-      function applyTheme(theme){
-        const root = document.documentElement;
-        root.dataset.theme = theme;
-        if (configThemeToggle){
-          configThemeToggle.textContent = theme === "light" ? "Theme: Light" : "Theme: Dark";
-        }
-        console.log("[config] applyTheme", { theme });
-      }
-
-      function initTheme(){
-        let theme;
-        try {
-          theme = localStorage.getItem(THEME_KEY);
-        } catch (err) {
-          console.warn("[config] initTheme: failed to read localStorage", err);
-        }
-        if (theme !== "light" && theme !== "dark") theme = "dark";
-        console.log("[config] initTheme", { theme });
-        applyTheme(theme);
-      }
-
-      async function boot(){
-        console.log("[boot] start");
-        svg.style.touchAction = "none";
-
-        initTheme();
-
+        await new Promise((res, rej) => {
+          const req = indexedDB.deleteDatabase(DB_NAME);
+          req.onsuccess = () => res();
+          req.onerror   = () => rej(req.error);
+          req.onblocked = () => res();
+        });
         db = await openDB();
-        console.log("[boot] db opened");
+        console.log("[config] importBackupData: existing db cleared and reopened");
+      } else {
+        if (!db) db = await openDB();
+      }
 
-        await refreshProjectList();
-        gateOn();
-        clearGraph();
-        renderPalette();
+      const importedProjects = data.projects || [];
+      const importedStates   = data.states || [];
+      const importedHistory  = data.history || [];
 
-        initViewBox();
-        updateZoomLabel();
+      const idMap = new Map();
+      let offset = 0;
+      const existingNames = new Set();
 
-        requestAnimationFrame(positionColorInput);
-        setStatus("Mode: create/open a project");
+      if (mode === "merge"){
+        const existing = await listProjects();
+        let maxId = 0;
+        existing.forEach(p => {
+          if (typeof p.id === "number" && p.id > maxId) maxId = p.id;
+          if (p.name) existingNames.add(p.name);
+        });
+        offset = maxId;
+        console.log("[config] importBackupData: merge offset", offset);
+      }
 
-        window.addEventListener("resize", () => {
-          const rect = svg.getBoundingClientRect();
-          if (!rect.width || !rect.height) {
-            positionColorInput();
-            return;
+      await new Promise((res, rej) => {
+        const t = tx(["projects","states","history"], "readwrite");
+        const projStore  = t.objectStore("projects");
+        const stateStore = t.objectStore("states");
+        const histStore  = t.objectStore("history");
+
+        if (mode === "replace"){
+          projStore.clear();
+          stateStore.clear();
+          histStore.clear();
+        }
+
+          // Write projects, de-duplicating names in merge mode
+        importedProjects.forEach(p => {
+          const oldId = p.id;
+          const newId = mode === "merge" ? (oldId + offset) : oldId;
+          idMap.set(oldId, newId);
+
+          let name = p.name || "Untitled project";
+          if (mode === "merge"){
+            if (existingNames.has(name)){
+              const base = name + " (import)";
+              let candidate = base;
+              let n = 2;
+              while (existingNames.has(candidate)){
+                candidate = `${base} ${n}`;
+                n += 1;
+              }
+              name = candidate;
+            }
+            existingNames.add(name);
           }
 
+          const rec = { ...p, id: newId, name };
+          projStore.put(rec);
+        });
+
+          // Write states with remapped projectIds
+        importedStates.forEach(s => {
+          const oldPid = s.projectId;
+          if (oldPid == null) return;
+          let newPid;
+          if (mode === "merge"){
+            if (idMap.has(oldPid)){
+              newPid = idMap.get(oldPid);
+            } else {
+              newPid = oldPid + offset;
+              idMap.set(oldPid, newPid);
+            }
+          } else {
+            newPid = oldPid;
+          }
+          const rec = { ...s, projectId: newPid };
+          stateStore.put(rec);
+        });
+
+          // Write history with remapped projectIds
+        importedHistory.forEach(h => {
+          const oldPid = h.projectId;
+          if (oldPid == null) return;
+          let newPid;
+          if (mode === "merge"){
+            if (idMap.has(oldPid)){
+              newPid = idMap.get(oldPid);
+            } else {
+              newPid = oldPid + offset;
+              idMap.set(oldPid, newPid);
+            }
+          } else {
+            newPid = oldPid;
+          }
+          const rec = { ...h, projectId: newPid };
+          histStore.put(rec);
+        });
+
+        t.oncomplete = () => res();
+        t.onerror    = (event) => {
+          const err =
+          t.error ||
+          (event && event.target && event.target.error) ||
+          null;
+          console.error("[config] importBackupData: transaction error", err);
+          rej(err || new Error("Import transaction failed"));
+        };
+      });
+
+      await refreshProjectList();
+      gateOn();
+      clearGraph();
+      setStatus("Import complete");
+      console.log("[config] importBackupData: completed", { mode });
+    }
+
+
+
+
+    if (configImportRun && configImportFile) {
+      configImportRun.addEventListener("click", () => {
+        console.log("[config] Import button clicked");
+        const file = configImportFile.files && configImportFile.files[0];
+        if (!file) {
+          console.log("[config] Import: no file selected, opening picker");
+          configImportFile.click();
+          return;
+        }
+        runImportFromFile();
+      });
+
+      configImportFile.addEventListener("change", () => {
+        const file = configImportFile.files && configImportFile.files[0];
+        if (!file) return;
+        console.log("[config] File chosen via picker, running import");
+        runImportFromFile();
+      });
+
+      async function runImportFromFile() {
+        const file = configImportFile.files && configImportFile.files[0];
+        if (!file) {
+          console.log("[config] runImportFromFile: no file present");
+          return;
+        }
+
+        let mode = "replace";
+        const modeInput = document.querySelector('input[name="import-mode"]:checked');
+        if (modeInput) mode = modeInput.value;
+
+        try {
+          const text = await file.text();
+          const data = JSON.parse(text);
+          await importBackupData(data, mode);
+        } catch (e) {
+          console.error("[config] Import: failed to import backup", e);
+          alert("Failed to import backup.");
+        } finally {
+          configImportFile.value = "";
+        }
+      }
+    }
+
+    if (configDbRefresh) {
+      configDbRefresh.addEventListener("click", () => {
+        console.log("[config] Recalculate size clicked");
+        refreshDbSizeLabel();
+      });
+    }
+
+    if (configDbClear) {
+      configDbClear.addEventListener("click", () => {
+        console.log("[config] Clear database clicked");
+        clearIndexedDB();
+      });
+    }
+
+    if (configExportBtn) {
+      configExportBtn.addEventListener("click", () => {
+        console.log("[config] Export data clicked");
+        exportAllData();
+      });
+    }
+
+    if (configThemeToggle) {
+      configThemeToggle.addEventListener("click", () => {
+        const root = document.documentElement;
+        const current = root.dataset.theme === "light" ? "light" : "dark";
+        const next = current === "light" ? "dark" : "light";
+        console.log("[config] Theme toggle clicked", { current, next });
+        applyTheme(next);
+        try {
+          localStorage.setItem(THEME_KEY, next);
+        } catch (err) {
+          console.warn("[config] Theme toggle: failed to persist theme", err);
+        }
+      });
+    }
+
+    function clearIndexedDB(){
+      console.log("[config] clearIndexedDB: start");
+      const ok = confirm("Clear all Node Canvas data from this browser? This cannot be undone.");
+      if (!ok) {
+        console.log("[config] clearIndexedDB: user cancelled");
+        return;
+      }
+      if (db){
+        db.close();
+        db = null;
+      }
+      const req = indexedDB.deleteDatabase(DB_NAME);
+      req.onsuccess = () => {
+        setStatus("Database cleared");
+        console.log("[config] clearIndexedDB: success, reloading");
+        location.reload();
+      };
+      req.onerror = () => {
+        setStatus("Failed to clear database");
+        console.error("[config] clearIndexedDB: error", req.error);
+      };
+      req.onblocked = () => {
+        setStatus("Database clear blocked by another tab");
+        console.warn("[config] clearIndexedDB: blocked");
+      };
+    }
+
+    async function estimateDBSizeBytes(){
+      console.log("[config] estimateDBSizeBytes: start");
+      if (!db) {
+        console.log("[config] estimateDBSizeBytes: no db");
+        return 0;
+      }
+      const stores = ["projects","states","history"];
+      let total = 0;
+      for (const store of stores){
+        await new Promise((res, rej) => {
+          const t = tx([store]);
+          const s = t.objectStore(store);
+          const req = s.openCursor();
+          req.onsuccess = (e) => {
+            const cur = e.target.result;
+            if (cur){
+              try {
+                total += JSON.stringify(cur.value).length;
+              } catch(_) {}
+              cur.continue();
+            } else {
+              res();
+            }
+          };
+          req.onerror = () => rej(req.error);
+        });
+      }
+      console.log("[config] estimateDBSizeBytes: done", { bytes: total });
+      return total;
+    }
+
+    async function refreshDbSizeLabel(){
+      if (!configDbSize) return;
+      configDbSize.textContent = "IndexedDB usage: calculating…";
+      try{
+        const bytes = await estimateDBSizeBytes();
+        let human;
+        if (bytes < 1024) human = `${bytes} B`;
+        else if (bytes < 1024*1024) human = `${(bytes/1024).toFixed(1)} KB`;
+        else human = `${(bytes/1024/1024).toFixed(2)} MB`;
+        configDbSize.textContent = `IndexedDB usage (approx.): ${human}`;
+        console.log("[config] refreshDbSizeLabel:", { bytes, human });
+      }catch(e){
+        configDbSize.textContent = "IndexedDB usage: n/a";
+        console.error("[config] refreshDbSizeLabel: error", e);
+      }
+    }
+
+    function showConfigOverlay(){
+      if (!configOverlay) {
+        console.warn("[config] showConfigOverlay: overlay missing");
+        return;
+      }
+      console.log("[config] showConfigOverlay");
+      configOverlay.style.display = "flex";
+      refreshDbSizeLabel();
+    }
+
+    function hideConfigOverlay(){
+      if (!configOverlay) return;
+      console.log("[config] hideConfigOverlay");
+      configOverlay.style.display = "none";
+    }
+
+    function applyTheme(theme){
+      const root = document.documentElement;
+      root.dataset.theme = theme;
+      if (configThemeToggle){
+        configThemeToggle.textContent = theme === "light" ? "Theme: Light" : "Theme: Dark";
+      }
+      console.log("[config] applyTheme", { theme });
+    }
+
+    function initTheme(){
+      let theme;
+      try {
+        theme = localStorage.getItem(THEME_KEY);
+      } catch (err) {
+        console.warn("[config] initTheme: failed to read localStorage", err);
+      }
+      if (theme !== "light" && theme !== "dark") theme = "dark";
+      console.log("[config] initTheme", { theme });
+      applyTheme(theme);
+    }
+
+    async function boot(){
+      console.log("[boot] start");
+      svg.style.touchAction = "none";
+
+      initTheme();
+
+      db = await openDB();
+      console.log("[boot] db opened");
+
+      await refreshProjectList();
+      gateOn();
+      clearGraph();
+      renderPalette();
+
+      initViewBox();
+      updateZoomLabel();
+
+      requestAnimationFrame(positionColorInput);
+      setStatus("Mode: create/open a project");
+
+      window.addEventListener("resize", () => {
+        const rect = svg.getBoundingClientRect();
+        if (!rect.width || !rect.height) {
+          positionColorInput();
+          return;
+        }
+
           // keep current world center
-          const cx = viewBox.x + viewBox.w / 2;
-          const cy = viewBox.y + viewBox.h / 2;
+        const cx = viewBox.x + viewBox.w / 2;
+        const cy = viewBox.y + viewBox.h / 2;
 
           // update "base" size used for zoom=1
-          baseViewBox.w = rect.width;
-          baseViewBox.h = rect.height;
+        baseViewBox.w = rect.width;
+        baseViewBox.h = rect.height;
 
           // recompute viewBox size from current zoom
           // zoom is defined as baseViewBox.w / viewBox.w
-          viewBox.w = baseViewBox.w / zoom;
-          viewBox.h = baseViewBox.h / zoom;
+        viewBox.w = baseViewBox.w / zoom;
+        viewBox.h = baseViewBox.h / zoom;
 
           // keep same center in world coordinates
-          viewBox.x = cx - viewBox.w / 2;
-          viewBox.y = cy - viewBox.h / 2;
+        viewBox.x = cx - viewBox.w / 2;
+        viewBox.y = cy - viewBox.h / 2;
 
-          updateViewBox();
-          updateZoomLabel();
-          positionColorInput();
-        });
-
-
-        console.log("[boot] complete");
-      }
-
-      boot();
+        updateViewBox();
+        updateZoomLabel();
+        positionColorInput();
+      });
 
 
-    })();
+      console.log("[boot] complete");
+    }
+
+    boot();
 
 
-  </script>
+  })();
+
+
+</script>
 
 </body>
 </html>
