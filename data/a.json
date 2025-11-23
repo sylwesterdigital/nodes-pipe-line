@@ -1,0 +1,223 @@
+{
+  "dbName": "node-editor",
+  "version": 1,
+  "exportedAt": "2025-11-23T00:00:00.000Z",
+  "projects": [
+    {
+      "id": 1,
+      "name": "Anduril – Owners & Investors",
+      "createdAt": 1763900000000,
+      "updatedAt": 1763900000000,
+      "pointer": 0,
+      "palette": {
+        "colors": [
+          "#5fc4a2",
+          "#22c55e",
+          "#f59e0b",
+          "#ef4444"
+        ],
+        "selected": 0
+      }
+    }
+  ],
+  "states": [
+    {
+      "projectId": 1,
+      "rev": 0,
+      "state": {
+        "nodes": [
+          {
+            "id": 1,
+            "x": 600,
+            "y": 200,
+            "label": "Anduril Industries",
+            "description": "Private U.S. defense technology company (founded 2017) developing autonomous systems and AI-enabled defense platforms."
+          },
+          {
+            "id": 2,
+            "x": 600,
+            "y": 60,
+            "label": "Founders & Early Owners",
+            "description": "Founders and early employees hold a significant ownership stake as Anduril is a privately held company."
+          },
+          {
+            "id": 3,
+            "x": 360,
+            "y": 60,
+            "label": "Palmer Luckey",
+            "description": "Co-founder of Anduril; previously founded Oculus VR. One of the major individual owners of the company."
+          },
+          {
+            "id": 4,
+            "x": 480,
+            "y": 60,
+            "label": "Trae Stephens",
+            "description": "Co-founder and chairman; also a partner at Founders Fund, which seeded and has repeatedly backed Anduril."
+          },
+          {
+            "id": 5,
+            "x": 720,
+            "y": 60,
+            "label": "Brian Schimpf",
+            "description": "Co-founder and CEO; former Palantir executive, holds equity as a key founder and leader."
+          },
+          {
+            "id": 6,
+            "x": 840,
+            "y": 60,
+            "label": "Matt Grimm",
+            "description": "Co-founder and COO; early Anduril executive with an ownership stake."
+          },
+          {
+            "id": 7,
+            "x": 240,
+            "y": 60,
+            "label": "Joe Chen",
+            "description": "Co-founder; part of the founding team holding equity in the company."
+          },
+          {
+            "id": 8,
+            "x": 250,
+            "y": 260,
+            "label": "Founders Fund",
+            "description": "Venture capital firm led by Peter Thiel; seeded Anduril and led multiple large rounds, including a recent multi-billion-dollar raise."
+          },
+          {
+            "id": 9,
+            "x": 380,
+            "y": 260,
+            "label": "Andreessen Horowitz (a16z)",
+            "description": "Major Silicon Valley VC investor in Anduril’s early and growth funding rounds."
+          },
+          {
+            "id": 10,
+            "x": 510,
+            "y": 260,
+            "label": "General Catalyst",
+            "description": "Venture firm and repeat investor in Anduril’s growth funding."
+          },
+          {
+            "id": 11,
+            "x": 640,
+            "y": 260,
+            "label": "Lux Capital",
+            "description": "Deep-tech focused VC; part of Anduril’s significant funding rounds."
+          },
+          {
+            "id": 12,
+            "x": 770,
+            "y": 260,
+            "label": "8VC",
+            "description": "Venture firm backing Anduril’s early and mid-stage rounds, focused on frontier technology."
+          },
+          {
+            "id": 13,
+            "x": 900,
+            "y": 260,
+            "label": "Valor Equity Partners",
+            "description": "Growth equity investor that has led or participated in large Anduril rounds, including a major Series E raise."
+          },
+          {
+            "id": 14,
+            "x": 1030,
+            "y": 260,
+            "label": "D1 Capital Partners",
+            "description": "Hedge fund / crossover investor participating in later Anduril funding rounds."
+          },
+          {
+            "id": 15,
+            "x": 250,
+            "y": 360,
+            "label": "Sands Capital",
+            "description": "Investor that co-led a large Anduril round, backing its expansion as a major defense contractor."
+          },
+          {
+            "id": 16,
+            "x": 380,
+            "y": 360,
+            "label": "Fidelity Management",
+            "description": "Institutional investor (through Fidelity funds) involved in late-stage Anduril financing."
+          },
+          {
+            "id": 17,
+            "x": 510,
+            "y": 360,
+            "label": "Counterpoint Global",
+            "description": "Morgan Stanley Counterpoint Global; institutional investor in Anduril’s large funding rounds."
+          },
+          {
+            "id": 18,
+            "x": 640,
+            "y": 360,
+            "label": "Baillie Gifford",
+            "description": "Long-term public and private markets investor with exposure to Anduril as a late-stage growth company."
+          },
+          {
+            "id": 19,
+            "x": 770,
+            "y": 360,
+            "label": "Altimeter Capital",
+            "description": "Technology-focused investment firm participating in Anduril’s high-valuation rounds."
+          },
+          {
+            "id": 20,
+            "x": 900,
+            "y": 360,
+            "label": "1789 Capital & Others",
+            "description": "Newer and smaller funds such as 1789 Capital and various institutional investors that hold minority stakes."
+          },
+          {
+            "id": 21,
+            "x": 600,
+            "y": 460,
+            "label": "Employees & Management",
+            "description": "Anduril employees and leadership beyond the founders who hold stock or options as part of a private-company ownership structure."
+          },
+          {
+            "id": 22,
+            "x": 250,
+            "y": 460,
+            "label": "Peter Thiel",
+            "description": "Co-founder of Founders Fund; influential Anduril backer through the fund, not publicly listed as a direct majority owner."
+          },
+          {
+            "id": 23,
+            "x": 930,
+            "y": 460,
+            "label": "Government & Defense Customers",
+            "description": "U.S. Department of Defense and allied government agencies are major customers via contracts, but are not equity owners."
+          }
+        ],
+        "links": [
+          { "from": 1, "to": 2 },
+          { "from": 2, "to": 3 },
+          { "from": 2, "to": 4 },
+          { "from": 2, "to": 5 },
+          { "from": 2, "to": 6 },
+          { "from": 2, "to": 7 },
+
+          { "from": 1, "to": 8 },
+          { "from": 1, "to": 9 },
+          { "from": 1, "to": 10 },
+          { "from": 1, "to": 11 },
+          { "from": 1, "to": 12 },
+          { "from": 1, "to": 13 },
+          { "from": 1, "to": 14 },
+          { "from": 1, "to": 15 },
+          { "from": 1, "to": 16 },
+          { "from": 1, "to": 17 },
+          { "from": 1, "to": 18 },
+          { "from": 1, "to": 19 },
+          { "from": 1, "to": 20 },
+
+          { "from": 1, "to": 21 },
+
+          { "from": 8, "to": 22 },
+
+          { "from": 1, "to": 23 }
+        ],
+        "nextId": 24
+      }
+    }
+  ]
+}

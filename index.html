@@ -276,11 +276,6 @@
   justify-content:flex-end;
 }
 
-
-
-
-
-
 /* Project form: input + buttons */
 #project-form{
   display:flex;
@@ -1023,12 +1018,14 @@
 
     <div id="menu">
       <button data-action="connect">Start connection</button>
+      <button data-action="clear-links">Remove connections</button>
       <button data-action="rename">Rename</button>
       <button data-action="description">Description</button> 
       <button data-action="duplicate">Clone</button>
       <hr>
       <button class="danger" data-action="delete">Delete</button>
     </div>
+
 
     <div id="topbar">
 
@@ -1540,6 +1537,9 @@
         });
       }
 
+      function getSelectedNode(){
+        return nodes.find(n => n.id === selectedNodeId) || null;
+      }
 
 
 
@@ -2432,7 +2432,11 @@ function renderNodes() {
     g.classList.add("node");
     g.dataset.id = String(node.id);
 
-    const style = node.style || makeDefaultStyle();
+    // Ensure every node has a persistent style object
+    if (!node.style) {
+      node.style = makeDefaultStyle();
+    }
+    const style = node.style;
     const isSelected = node.id === selectedNodeId;
 
     let shapeEl;
@@ -2572,6 +2576,13 @@ menu.addEventListener("click", (e)=>{
     return;
   }
 
+  if (action === "clear-links") {
+    const node = menuNode;
+    closeMenu();
+    clearNodeConnectionsWrapped(node);
+    return;
+  }
+
   if (action === "rename") {
     const node = menuNode;
     closeMenu();
@@ -2586,11 +2597,13 @@ menu.addEventListener("click", (e)=>{
     return;
   }
 
-  if (action === "duplicate") { duplicateNodeWrapped(menuNode, true); }
+  if (action === "duplicate") { clearMenu = false; duplicateNodeWrapped(menuNode, true); }
   if (action === "delete")    { deleteNodeWrapped(menuNode); }
 
   closeMenu();
 });
+
+
 
 wrapper.addEventListener("pointerdown", (e)=>{
   if (e.target === svg) closeMenu();
@@ -3190,6 +3203,8 @@ let pinchStartViewBox = { x: 0, y: 0, w: 0, h: 0 };
           sw.className = "swatch" + (palette.selected===i ? " selected" : "");
           sw.style.background = c;
           sw.title = `Color ${i+1}`;
+
+
           sw.addEventListener("click", ()=>{
             palette.selected = i;
             paletteEl.querySelectorAll(".swatch").forEach((el, idx)=>{
@@ -3198,9 +3213,18 @@ let pinchStartViewBox = { x: 0, y: 0, w: 0, h: 0 };
               else el.classList.remove("selected");
             });
             updateProjectMeta({ palette });
-            if (lastHoverNode) restyleNodeWrapped(lastHoverNode, { fill: palette.colors[i], stroke: palette.colors[i] });
+
+            const selectedNode = getSelectedNode();
+            if (selectedNode) {
+              restyleNodeWrapped(selectedNode, {
+                fill:   palette.colors[i],
+                stroke: palette.colors[i]
+              });
+            }
+
             positionColorInput();
           });
+
           paletteEl.appendChild(sw);
         });
 
@@ -3234,9 +3258,18 @@ let pinchStartViewBox = { x: 0, y: 0, w: 0, h: 0 };
         palette.colors[idx] = val;
         const sw = paletteEl.querySelectorAll(".swatch")[idx];
         if (sw) sw.style.background = val;
-        if (lastHoverNode) restyleNodeWrapped(lastHoverNode, { fill: val, stroke: val });
+
+        const selectedNode = getSelectedNode();
+        if (selectedNode) {
+          restyleNodeWrapped(selectedNode, {
+            fill:   val,
+            stroke: val
+          });
+        }
+
         setStatus(`Preview color #${idx+1} → ${val}`);
       });
+
 
       colorInput.addEventListener("change", async (e)=>{
         const val = normHex(e.target.value);
@@ -3885,6 +3918,32 @@ let pinchStartViewBox = { x: 0, y: 0, w: 0, h: 0 };
         pushAction({ type: "CLEAR_ALL", at: Date.now() });
         setStatus("All nodes and connections cleared");
       }
+
+      function clearNodeConnectionsWrapped(node){
+        if (!links.length) {
+          setStatus("No connections to remove");
+          return;
+        }
+
+        const before = links.length;
+        links = links.filter(l => l.from !== node.id && l.to !== node.id);
+
+        if (links.length === before) {
+          setStatus(`No connections for "${node.label}"`);
+          return;
+        }
+
+        renderLinks();
+        pushAction({
+          type: "CLEAR_LINKS_FOR_NODE",
+          at: Date.now(),
+          id: node.id
+        });
+
+        const removed = before - links.length;
+        setStatus(`Removed ${removed} connection(s) for "${node.label}"`);
+      }
+
 
 
 

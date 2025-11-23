@@ -1,0 +1,340 @@
+{
+  "dbName": "node-editor",
+  "version": 1,
+  "exportedAt": "2025-11-23T01:04:09.000Z",
+  "projects": [
+    {
+      "id": 1,
+      "name": "Anduril investors & founders",
+      "createdAt": 1763859849191,
+      "updatedAt": 1763859849191,
+      "pointer": 0,
+      "palette": {
+        "colors": [
+          "#3b82f6",
+          "#22c55e",
+          "#f59e0b",
+          "#ef4444"
+        ],
+        "selected": 0
+      }
+    }
+  ],
+  "states": [
+    {
+      "projectId": 1,
+      "rev": 0,
+      "state": {
+        "nodes": [
+          {
+            "id": 1,
+            "x": 600,
+            "y": 80,
+            "label": "Anduril Industries",
+            "description": "Private U.S. defense technology company founded in 2017; develops autonomous defense systems and mission autonomy software."
+          },
+          {
+            "id": 2,
+            "x": 360,
+            "y": 220,
+            "label": "Palmer Luckey",
+            "description": "Co‑founder of Anduril; previously founded Oculus VR. Public face of the company and key product visionary."
+          },
+          {
+            "id": 3,
+            "x": 520,
+            "y": 220,
+            "label": "Trae Stephens",
+            "description": "Co‑founder and executive chairman of Anduril; also a partner at Founders Fund, connecting the company to Peter Thiel’s VC network."
+          },
+          {
+            "id": 4,
+            "x": 680,
+            "y": 220,
+            "label": "Matt Grimm",
+            "description": "Co‑founder and executive at Anduril, involved in operations and scaling the business."
+          },
+          {
+            "id": 5,
+            "x": 840,
+            "y": 220,
+            "label": "Joe Chen",
+            "description": "Co‑founder of Anduril; early leader in product and engineering."
+          },
+          {
+            "id": 6,
+            "x": 1000,
+            "y": 220,
+            "label": "Brian Schimpf",
+            "description": "Co‑founder and CEO of Anduril; previously at Palantir; responsible for day‑to‑day leadership and strategy."
+          },
+          {
+            "id": 7,
+            "x": 200,
+            "y": 400,
+            "label": "Founders Fund",
+            "description": "Venture capital firm co‑founded by Peter Thiel; seeded Anduril and has led multiple large rounds including Series F and Series G."
+          },
+          {
+            "id": 8,
+            "x": 380,
+            "y": 400,
+            "label": "Andreessen Horowitz (a16z)",
+            "description": "Major Silicon Valley VC firm; investor in several Anduril rounds, including early growth stages."
+          },
+          {
+            "id": 9,
+            "x": 560,
+            "y": 400,
+            "label": "General Catalyst",
+            "description": "Venture capital firm backing Anduril across multiple rounds as the company scaled."
+          },
+          {
+            "id": 10,
+            "x": 740,
+            "y": 400,
+            "label": "8VC",
+            "description": "Venture capital firm focused on technology and national‑security‑related startups; early investor in Anduril."
+          },
+          {
+            "id": 11,
+            "x": 920,
+            "y": 400,
+            "label": "Lux Capital",
+            "description": "VC firm investing in deep tech and defense; participated in Anduril’s later funding rounds."
+          },
+          {
+            "id": 12,
+            "x": 1100,
+            "y": 400,
+            "label": "Valor Equity Partners",
+            "description": "Growth‑equity firm that led or co‑led major Anduril rounds, including Series E."
+          },
+          {
+            "id": 13,
+            "x": 260,
+            "y": 540,
+            "label": "Sands Capital",
+            "description": "Public and private markets investor; co‑led or joined Anduril’s later mega‑rounds."
+          },
+          {
+            "id": 14,
+            "x": 440,
+            "y": 540,
+            "label": "Fidelity",
+            "description": "Large asset‑management firm; participated in later Anduril growth rounds as an institutional investor."
+          },
+          {
+            "id": 15,
+            "x": 620,
+            "y": 540,
+            "label": "Baillie Gifford",
+            "description": "Long‑term public and private investor; took a position in Anduril in late‑stage VC rounds."
+          },
+          {
+            "id": 16,
+            "x": 800,
+            "y": 540,
+            "label": "Altimeter Capital",
+            "description": "Technology‑focused investment firm; joined Anduril’s later funding rounds."
+          },
+          {
+            "id": 17,
+            "x": 980,
+            "y": 540,
+            "label": "D1 Capital Partners",
+            "description": "Crossover hedge fund / VC investor; participated in Anduril growth financing."
+          },
+          {
+            "id": 18,
+            "x": 120,
+            "y": 260,
+            "label": "Peter Thiel",
+            "description": "Co‑founder of Founders Fund and Palantir; influential early backer of Anduril via Founders Fund."
+          },
+          {
+            "id": 19,
+            "x": 120,
+            "y": 520,
+            "label": "Elad Gil",
+            "description": "Angel and VC investor; led Anduril’s large Series D round and helped bring in multiple top‑tier funds."
+          },
+          {
+            "id": 20,
+            "x": 120,
+            "y": 640,
+            "label": "J.D. Vance",
+            "description": "U.S. politician and investor; reported as a personal investor in Anduril through venture connections."
+          },
+          {
+            "id": 21,
+            "x": 600,
+            "y": 700,
+            "label": "Employees & Other Shareholders",
+            "description": "Includes Anduril employees with equity and other smaller or undisclosed investors; exact ownership percentages are private."
+          }
+        ],
+        "links": [
+          {
+            "from": 1,
+            "to": 2,
+            "style": {
+              "color": "#3b82f6"
+            }
+          },
+          {
+            "from": 1,
+            "to": 3,
+            "style": {
+              "color": "#3b82f6"
+            }
+          },
+          {
+            "from": 1,
+            "to": 4,
+            "style": {
+              "color": "#3b82f6"
+            }
+          },
+          {
+            "from": 1,
+            "to": 5,
+            "style": {
+              "color": "#3b82f6"
+            }
+          },
+          {
+            "from": 1,
+            "to": 6,
+            "style": {
+              "color": "#3b82f6"
+            }
+          },
+          {
+            "from": 7,
+            "to": 1,
+            "style": {
+              "color": "#3b82f6"
+            }
+          },
+          {
+            "from": 8,
+            "to": 1,
+            "style": {
+              "color": "#3b82f6"
+            }
+          },
+          {
+            "from": 9,
+            "to": 1,
+            "style": {
+              "color": "#3b82f6"
+            }
+          },
+          {
+            "from": 10,
+            "to": 1,
+            "style": {
+              "color": "#3b82f6"
+            }
+          },
+          {
+            "from": 11,
+            "to": 1,
+            "style": {
+              "color": "#3b82f6"
+            }
+          },
+          {
+            "from": 12,
+            "to": 1,
+            "style": {
+              "color": "#3b82f6"
+            }
+          },
+          {
+            "from": 13,
+            "to": 1,
+            "style": {
+              "color": "#3b82f6"
+            }
+          },
+          {
+            "from": 14,
+            "to": 1,
+            "style": {
+              "color": "#3b82f6"
+            }
+          },
+          {
+            "from": 15,
+            "to": 1,
+            "style": {
+              "color": "#3b82f6"
+            }
+          },
+          {
+            "from": 16,
+            "to": 1,
+            "style": {
+              "color": "#3b82f6"
+            }
+          },
+          {
+            "from": 17,
+            "to": 1,
+            "style": {
+              "color": "#3b82f6"
+            }
+          },
+          {
+            "from": 18,
+            "to": 7,
+            "style": {
+              "color": "#3b82f6"
+            }
+          },
+          {
+            "from": 3,
+            "to": 7,
+            "style": {
+              "color": "#3b82f6"
+            }
+          },
+          {
+            "from": 19,
+            "to": 1,
+            "style": {
+              "color": "#3b82f6"
+            }
+          },
+          {
+            "from": 20,
+            "to": 1,
+            "style": {
+              "color": "#3b82f6"
+            }
+          },
+          {
+            "from": 21,
+            "to": 1,
+            "style": {
+              "color": "#3b82f6"
+            }
+          }
+        ],
+        "nextId": 22
+      }
+    }
+  ],
+  "history": [
+    {
+      "projectId": 1,
+      "seq": 1,
+      "action": {
+        "type": "INIT",
+        "at": 1763859849191
+      }
+    }
+  ]
+}
