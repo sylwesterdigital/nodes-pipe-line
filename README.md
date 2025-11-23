@@ -7,7 +7,9 @@ This repo is an experiment in building a “wire APIs together like Lego” canv
 > Goal: a small, understandable codebase that can evolve into a visual workflow / API-orchestration tool.
 
 # Early Demo:
-https://github.com/user-attachments/assets/fb4c45d8-b233-4367-8bd7-2dd61e52857d
+https://github.com/user-attachments/assets/1081b590-cb32-40ee-9492-2628b7f04b81
+
+
 
 
 ---
