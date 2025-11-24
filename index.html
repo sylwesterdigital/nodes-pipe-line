@@ -39,8 +39,6 @@
     }
 
 
-
-
     * { -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; }
     body { overscroll-behavior: none; }
     body {
@@ -62,13 +60,26 @@
     /* Sidebar */
     #sidebar {
       width:min(340px, 88vw);
-      padding:16px; border-right:1px solid #2e2f3a; background:var(--panel);
-      display:none; flex-direction:column; gap:12px;
-      position:absolute; z-index:40; left:12px; top:60px;
-      border-radius:12px; box-shadow:0 20px 60px var(--shadow);
+      padding:16px;
+      border-right:1px solid #2e2f3a;
+      background:var(--panel);
+      display:none;
+      flex-direction:column;
+      gap:12px;
+      position:absolute;
+      z-index:40;
+      left:12px;
+      top:60px;
+      border-radius:12px;
+      box-shadow:0 20px 60px var(--shadow);
+
+      max-height:calc(100vh - 80px);
+      overflow-y:auto;
     }
+
+
     #sidebar h1 { font-size:18px; }
-    #sidebar .hint { font-size:16px; line-height:1.5; padding:10px; border-radius:10px; background:var(--muted); border:1px solid var(--muted-2); }
+    #sidebar .hint { font-size:12px; line-height:1.5; padding:10px; border-radius:10px; background:var(--muted); border:1px solid var(--muted-2); }
 
     /* Canvas area */
     #canvas-wrapper { flex:1; position:relative; overflow:hidden; }
@@ -171,10 +182,28 @@
       position:absolute; right:12px; bottom:12px; z-index:15; display:flex; gap:10px;
       background: var(--pill); border:1px solid var(--pill-b); padding:8px 10px; border-radius:12px; align-items:center;
     }
+
+
     .swatch { width:28px; height:28px; border-radius:6px; border:1px solid rgba(255,255,255,.2); cursor:pointer; position:relative; }
     .swatch.selected { outline:2px solid #fff; outline-offset:2px; }
     .swatch.picker { display:grid; place-items:center; font-size:18px; width:32px; height:32px; border-radius:8px; }
     .swatch.picker span { pointer-events:none; }
+
+    /* NEW: mode selector swatch for [nodes] [lines] [text] [background] */
+    .swatch.mode {
+      min-width: 80px;
+      padding: 0 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      text-transform: uppercase;
+      border-radius: 8px;
+      background: rgba(15,23,42,0.9);
+      border: 1px solid rgba(148,163,184,0.7);
+      white-space: nowrap;
+    }
+
 
     /* Invisible color-input exactly on top of the ＋ swatch */
     #palette-color-input {
@@ -517,8 +546,6 @@
 }
 
 
-
-
 @media (max-width: 767px) {
   #topbar { display:none; }
 }
@@ -550,7 +577,6 @@
   font-size:13px;
   text-align:center;
 }
-
 
 
 /* Light theme */
@@ -833,8 +859,13 @@
   border-color:var(--menu-bg) transparent transparent transparent;
 }
 
-
-
+/* Marquee selection box */
+#selection-rect{
+  fill: rgba(59,130,246,0.12);         /* light blue fill */
+  stroke: rgba(96,165,250,0.9);        /* blue border */
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
 
 
 </style>
@@ -857,18 +888,28 @@
 
   <aside id="sidebar">
     <h1>Node Canvas</h1>
-    <div class="hint">
-      • Create/open a project to enable the canvas.<br>
-      • Drag a node to move it (links follow). Long-press a node for actions.<br>
-      • Desktop: hover a node and press N to start a link.<br>
-      • Touch: start connection, touch canvas to begin guide, lift on target node.<br>
-      • Undo/Redo: Ctrl/⌘+Z / Ctrl/⌘+Y (desktop). Save: Ctrl/⌘+S.<br>
-      • Create node: click/tap empty canvas (not on an existing node).<br>
-      • Mobile: use the left tool rail (Lines/Edit/Delete) to change tap behavior.
-      • Pan canvas: hold Space and drag, or drag with the middle mouse button on empty canvas.<br>
-      • Mobile: drag with two fingers on empty canvas to pan the canvas.<br>
 
+    <div class="hint">
+      • Create / open a project to enable the canvas.<br>
+      • Drag a node to move it (links follow). Long-press / right-click a node for actions (Rename, Description, Clone, Delete, Clear links).<br>
+      • Desktop: hover a node and press <span class="kbd">N</span> to start a link; click another node to connect.<br>
+      • Touch: start connection on a node, then drag / tap to the target node to link.<br>
+      • Create node: click / tap empty canvas (not on an existing node). Dropping a node on a line inserts it into that connection.<br>
+      • Lines mode: toggle with <span class="kbd">L</span> or use the left rail (Lines). Tap nodes in sequence to chain-connect them.<br>
+      • Edit mode: toggle with <span class="kbd">E</span> or use the left rail (Edit) to tap-open the node menu.<br>
+      • Break mode: toggle with <span class="kbd">B</span> or use the left rail (Break). Tap near a line to remove that connection.<br>
+      • Delete mode: toggle with <span class="kbd">D</span> or use the left rail (Delete). Tap a node to remove it.<br>
+      • Info mode: use the left rail (Info) and hover nodes to see their descriptions as tooltips.<br>
+      • Keyboard: Undo <span class="kbd">Ctrl</span>/<span class="kbd">⌘</span><span class="kbd">+Z</span>, Redo <span class="kbd">Ctrl</span>/<span class="kbd">⌘</span><span class="kbd">+Y</span>, Save <span class="kbd">Ctrl</span>/<span class="kbd">⌘</span><span class="kbd">+S</span>.<br>
+      • Keyboard (nodes): delete hovered node with <span class="kbd">X</span>, duplicate hovered node with <span class="kbd">Shift</span><span class="kbd">+D</span>.<br>
+      • Pan canvas (desktop): hold <span class="kbd">Space</span> and drag, drag with the middle mouse button, or use trackpad two-finger drag.<br>
+      • Pan canvas (touch): drag with two fingers on empty canvas.<br>
+      • Zoom: use mouse wheel with <span class="kbd">Ctrl</span>/<span class="kbd">⌘</span> (trackpad pinch) or the bottom-left buttons (<span class="kbd">+</span>, <span class="kbd">−</span>, <span class="kbd">100%</span>, <span class="kbd">⤢</span>).<br>
+      • Layouts: use the <span class="kbd">Layouts</span> button (or mobile menu) to auto-arrange nodes in tree layouts.<br>
+      • Projects: use <span class="kbd">Open</span>, <span class="kbd">New</span>, <span class="kbd">Clone</span>, and <span class="kbd">Delete</span> in the top bar or mobile menu to manage multiple maps.<br>
+      • Config: use <span class="kbd">Config</span> to export / import backups, check IndexedDB usage, clear data, and toggle light / dark theme.
     </div>
+
   </aside>
 
 
@@ -977,7 +1018,7 @@
         </div>
       </div>
 
-      
+
 
       <div class="config-section">
         <h3>Appearance</h3>
@@ -1007,6 +1048,7 @@
     <div id="info-tooltip"></div>
 
 
+
     <svg id="canvas">
       <g id="links-layer"></g>
       <line id="temp-link" x1="0" y1="0" x2="0" y2="0"></line>
@@ -1027,14 +1069,19 @@
       stroke-width="2"
       style="display:none; pointer-events:none;"></circle>
 
+      <!-- NEW: marquee selection rectangle -->
+      <rect id="selection-rect"
+      x="0" y="0" width="0" height="0"
+      style="display:none; pointer-events:none;"></rect>
 
       <g id="nodes-layer"></g>
     </svg>
 
 
+
     <div id="menu">
-      <button data-action="connect">Start connection</button>
-      <button data-action="clear-links">Remove connections</button>
+      <button data-action="connect">Connection</button>
+      <button data-action="clear-links">Disconnect</button>
       <button data-action="rename">Rename</button>
       <button data-action="description">Description</button> 
       <button data-action="duplicate">Clone</button>
@@ -1124,7 +1171,15 @@
       <button id="tool-info"   class="tool" title="Info mode"><span class="lbl">Info</span></button>
       <button id="tool-break"  class="tool" title="Break lines"><span class="lbl">Break</span></button>
       <button id="tool-delete" class="tool" title="Delete mode"><span class="lbl">Delete</span></button>
+      <button id="tool-lock-children" class="tool" title="Move node together with its children">
+        <span class="lbl">Lock children</span>
+      </button>
+      <!-- NEW: marquee selection tool -->
+      <button id="tool-select" class="tool" title="Select multiple nodes">
+        <span class="lbl">Select</span>
+      </button>
     </div>
+
 
 
   </div>
@@ -1133,12 +1188,17 @@
 
     (function(){
 
+
+      const THEME_KEY = "nodeCanvasTheme";
+      const LAST_PROJECT_KEY = "nodeCanvasLastProjectId";      
+
       // ----- Core refs -----
       const svg = document.getElementById("canvas");
       const nodesLayer = document.getElementById("nodes-layer");
       const linksLayer = document.getElementById("links-layer");
       const tempLink = document.getElementById("temp-link");
       const hoverDot = document.getElementById("hover-dot");
+      const selectionRectEl = document.getElementById("selection-rect");
 
       const statusEl = document.getElementById("status");
       const menu = document.getElementById("menu");
@@ -1200,7 +1260,10 @@
       const toolEdit  = document.getElementById("tool-edit");
       const toolBreak  = document.getElementById("tool-break");
       const toolDelete= document.getElementById("tool-delete");
-      const toolInfo   = document.getElementById("tool-info");       
+      const toolInfo   = document.getElementById("tool-info");
+      const toolLockChildren = document.getElementById("tool-lock-children");
+      const toolSelect = document.getElementById("tool-select");
+
 
 
       const btnConfig = document.getElementById("btn-config");
@@ -1216,7 +1279,6 @@
       const configImportRun   = document.getElementById("config-import-run");
       const configThemeToggle = document.getElementById("config-theme-toggle");
 
-      const THEME_KEY = "nodeCanvasTheme";
 
 
       /* Dialog overlay refs */
@@ -1249,8 +1311,136 @@
       let nodes = [], links = [], nextId = 1;
       let hasUnsavedChanges = false;
 
-      // Palette state
-      let palette = { colors: ['#3b82f6','#22c55e','#f59e0b','#ef4444'], selected: 0 };
+      // Palette state (now with target + extra colors)
+      const defaultPalette = {
+        colors: ['#3b82f6', '#22c55e', '#f59e0b', '#ef4444'],
+        selected: 0,
+        target: 'nodes',     // 'nodes' | 'lines' | 'text' | 'background'
+        lineHex: null,       // optional global line color
+        textHex: null,       // node label color
+        bgHex: null          // app background color
+      };
+
+      let palette = JSON.parse(JSON.stringify(defaultPalette));
+      let paletteTarget = 'nodes';
+      const PALETTE_TARGETS = ['nodes', 'lines', 'text', 'background'];
+
+      function paletteTargetLabel(){
+        switch (paletteTarget) {
+        case 'lines':       return 'lines';
+        case 'text':        return 'text';
+        case 'background':  return 'background';
+        case 'nodes':
+        default:            return 'nodes';
+        }
+      }
+
+      function cyclePaletteTarget(){
+        const idx = PALETTE_TARGETS.indexOf(paletteTarget);
+        paletteTarget = PALETTE_TARGETS[(idx + 1) % PALETTE_TARGETS.length];
+        palette.target = paletteTarget;
+
+        const modeEl = paletteEl.querySelector(".swatch.mode");
+        if (modeEl) modeEl.textContent = paletteTargetLabel();
+
+        updateProjectMeta({ palette });
+        setStatus(`Color target: ${paletteTargetLabel()}`);
+      }
+
+
+
+
+      function applyAppBackgroundColorFromPalette(){
+        const col = palette.bgHex;
+        if (col) {
+          document.body.style.background = col;
+          svg.style.background = col;
+        } else {
+          document.body.style.background = "";
+          svg.style.background = "";
+        }
+      }
+
+
+
+      function applySelectedColorToTarget(hex){
+        const target = paletteTarget || 'nodes';
+
+        // 1) Nodes: recolor all selected nodes (multi-select aware)
+        if (target === 'nodes') {
+          const ids = new Set(selection);
+          if (selectedNodeId != null) ids.add(selectedNodeId);
+
+          if (!ids.size) return;
+
+          ids.forEach(id => {
+            const n = nodes.find(nn => nn.id === id);
+            if (!n) return;
+            restyleNodeWrapped(n, {
+              fill:   hex,
+              stroke: hex
+            });
+          });
+
+          return;
+        }
+
+        // 2) Lines: recolor existing links + default for NEW links
+        if (target === 'lines') {
+          palette.lineHex = hex;
+
+          links.forEach(l => {
+            l.style = l.style || {};
+            l.style.color = hex;
+          });
+
+          renderLinks();
+          return;
+        }
+
+        // 3) Text: node labels (per-node + default for new nodes)
+        if (target === 'text') {
+          palette.textHex = hex;
+
+          const ids = new Set(selection);
+          if (selectedNodeId != null) ids.add(selectedNodeId);
+
+          if (!ids.size) return;
+
+          ids.forEach(id => {
+            const n = nodes.find(nn => nn.id === id);
+            if (!n) return;
+            n.style = n.style || makeDefaultStyle();
+            n.style.textColor = hex;
+          });
+
+          updateNodeGraphics();
+          return;
+        }
+
+        // 4) Background: whole app
+        if (target === 'background') {
+          palette.bgHex = hex;
+          applyAppBackgroundColorFromPalette();
+          return;
+        }
+      }
+
+
+
+
+
+
+      function applyPaletteNonGraphEffects(){
+        // only background is global; text color is per-node now
+        applyAppBackgroundColorFromPalette();
+
+        const modeEl = paletteEl.querySelector(".swatch.mode");
+        if (modeEl) modeEl.textContent = paletteTargetLabel();
+      }
+
+
+
 
       let dragNode = null;
       let dragOffset = {x:0,y:0};
@@ -1259,6 +1449,7 @@
       let menuNode = null;
       let lastHoverNode = null;
       let dragCandidate = null;
+      let dragGroup = null;
 
       // Node state
       let selectedNodeId = null;
@@ -1289,10 +1480,19 @@
       let deleteMode= false;   // tap deletes node
       let breakMode  = false; 
       let infoMode   = false;
+      let lockChildrenMode = false; 
+
+      let selectMode = false;          // NEW: marquee selection mode
+      let selection = new Set();       // NEW: selected node ids
+      let isSelecting = false;         // currently dragging a selection box?
+      let selectionStartSvg = null;    // {x,y} in SVG coords
 
       let chainFrom = null;    // last node tapped in linesMode
       let tapMoved  = false;   // tracks movement to distinguish drag vs tap
       let touchPanActive = false;
+
+
+
 
       // ----- Canvas view (endless pan via viewBox) -----
       const viewBox = { x: 0, y: 0, w: 0, h: 0 };
@@ -1303,11 +1503,13 @@
       let viewBoxStart = { x: 0, y: 0 };
       let spacePressed = false;
 
+      let viewStateSaveTimer = null;
+
       /* Zoom state */
       let zoom = 1;
       const MIN_ZOOM = 0.01;
       const MAX_ZOOM = 5;
-      const ZOOM_STEP = 1.2;      
+      const ZOOM_STEP = 1.033;
 
       function updateZoomLabel(){
         if (!zoomLabel) return;
@@ -1326,16 +1528,62 @@
         svg.setAttribute("viewBox", `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
       }
 
+      // Apply initial camera for a project (or default if no stored view).
+      function applyInitialViewForProject(meta){
+        const rect = svg.getBoundingClientRect();
+        const defaultW = rect.width  || 1024;
+        const defaultH = rect.height || 768;
+        const v = meta && meta.view;
+
+        if (v && typeof v === "object") {
+          viewBox.x = typeof v.x === "number" ? v.x : 0;
+          viewBox.y = typeof v.y === "number" ? v.y : 0;
+          viewBox.w = typeof v.w === "number" && v.w > 0 ? v.w : defaultW;
+          viewBox.h = typeof v.h === "number" && v.h > 0 ? v.h : defaultH;
+        } else {
+          viewBox.x = 0;
+          viewBox.y = 0;
+          viewBox.w = defaultW;
+          viewBox.h = defaultH;
+        }
+
+        baseViewBox.w = defaultW;
+        baseViewBox.h = defaultH;
+
+        zoom = baseViewBox.w / viewBox.w;
+        if (!isFinite(zoom) || zoom <= 0) zoom = 1;
+
+        updateViewBox();
+        updateZoomLabel();
+      }
+
       function updateViewBox() {
         svg.setAttribute("viewBox", `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
+
         if (infoMode && lastHoverNode) {
           showInfoTooltipForNode(lastHoverNode);
+        }
+
+        // Persist per-project camera (debounced)
+        if (currentProject) {
+          if (viewStateSaveTimer) clearTimeout(viewStateSaveTimer);
+          viewStateSaveTimer = setTimeout(() => {
+            viewStateSaveTimer = null;
+            updateProjectMeta({
+              view: {
+                x: viewBox.x,
+                y: viewBox.y,
+                w: viewBox.w,
+                h: viewBox.h,
+                zoom
+              }
+            });
+          }, 400);
         }
       }
 
       function resetZoomTo100(){
         const rect = svg.getBoundingClientRect();
-        // Fall back to current viewport if baseViewBox is not set
         viewBox.w = baseViewBox.w || rect.width || 1024;
         viewBox.h = baseViewBox.h || rect.height || 768;
         viewBox.x = 0;
@@ -1354,7 +1602,6 @@
         return pt.matrixTransform(svg.getScreenCTM().inverse());
       }
 
-
       function hideInfoTooltip(){
         if (!infoTooltip) return;
         infoTooltip.style.display = "none";
@@ -1372,7 +1619,6 @@
         infoTooltip.textContent = text;
         infoTooltip.style.display = "block";
 
-        // node.x / node.y (SVG) → screen → wrapper coords
         const pt = svg.createSVGPoint();
         pt.x = node.x;
         pt.y = node.y;
@@ -1404,7 +1650,6 @@
         const rect = svg.getBoundingClientRect();
         const bounds = getNodesBounds();
 
-        // If nothing on canvas: just reset
         if (!bounds) {
           resetZoomTo100();
           return;
@@ -1422,11 +1667,9 @@
 
         let boxW, boxH;
         if (contentRatio > viewportRatio) {
-          // limited by width
           boxW = contentW;
           boxH = contentW / viewportRatio;
         } else {
-          // limited by height
           boxH = contentH;
           boxW = contentH * viewportRatio;
         }
@@ -1441,17 +1684,13 @@
 
         updateViewBox();
 
-        // Recompute zoom value relative to the base viewBox width
         const baseW = baseViewBox.w || rect.width || boxW;
         zoom = baseW / viewBox.w;
         updateZoomLabel();
         setStatus("Zoom: fit to map");
       }
 
-
-
       function applyZoomFactor(factor, clientX, clientY) {
-        // Clamp target zoom
         const prevZoom = zoom;
         let nextZoom = zoom * factor;
         if (nextZoom < MIN_ZOOM) nextZoom = MIN_ZOOM;
@@ -1462,21 +1701,17 @@
 
         const rect = svg.getBoundingClientRect();
 
-        // If no focus point given, zoom toward center of viewport
         const cx = clientX ?? (rect.left + rect.width / 2);
         const cy = clientY ?? (rect.top + rect.height / 2);
 
-        // Convert screen point → SVG coords
         const pt = svg.createSVGPoint();
         pt.x = cx;
         pt.y = cy;
         const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
 
-        // Scale viewBox
         viewBox.w /= allowedFactor;
         viewBox.h /= allowedFactor;
 
-        // Adjust origin so the focus SVG point stays under the same screen point
         const nx = svgP.x - ((cx - rect.left) / rect.width) * viewBox.w;
         const ny = svgP.y - ((cy - rect.top) / rect.height) * viewBox.h;
         viewBox.x = nx;
@@ -1486,13 +1721,7 @@
         updateViewBox();
         updateZoomLabel();
         setStatus(`Zoom: ${(zoom * 100).toFixed(0)}%`);
-
-        updateViewBox();
-
-        setStatus(`Zoom: ${(zoom * 100).toFixed(0)}%`);
       }
-
-
 
       function startPan(e) {
         isPanning = true;
@@ -1530,6 +1759,91 @@
 
 
       // ----- Utils -----
+
+
+      function clearSelection() {
+        if (!selection.size && selectedNodeId == null) return;
+        selection.clear();
+        selectedNodeId = null;
+        renderNodes();
+        setStatus("Selection cleared");
+      }
+
+      function updateSelectionRect(x1, y1, x2, y2) {
+        if (!selectionRectEl) return;
+        const rx = Math.min(x1, x2);
+        const ry = Math.min(y1, y2);
+        const rw = Math.abs(x2 - x1);
+        const rh = Math.abs(y2 - y1);
+        selectionRectEl.setAttribute("x", rx);
+        selectionRectEl.setAttribute("y", ry);
+        selectionRectEl.setAttribute("width", rw);
+        selectionRectEl.setAttribute("height", rh);
+        selectionRectEl.style.display = (rw > 2 && rh > 2) ? "block" : "none";
+      }
+
+      function onSelectionPointerMove(e){
+        if (!isSelecting || !selectionStartSvg) return;
+        const p = svgPoint(e);
+        updateSelectionRect(selectionStartSvg.x, selectionStartSvg.y, p.x, p.y);
+      }
+
+      function onSelectionPointerUp(e){
+        if (!isSelecting || !selectionStartSvg) return;
+
+        isSelecting = false;
+        try { svg.releasePointerCapture(e.pointerId); } catch(_) {}
+        svg.removeEventListener("pointermove", onSelectionPointerMove);
+
+        const pEnd = svgPoint(e);
+        const x1 = selectionStartSvg.x;
+        const y1 = selectionStartSvg.y;
+        const x2 = pEnd.x;
+        const y2 = pEnd.y;
+
+        selectionStartSvg = null;
+        updateSelectionRect(0,0,0,0);
+        if (selectionRectEl) selectionRectEl.style.display = "none";
+
+        const rx = Math.min(x1, x2);
+        const ry = Math.min(y1, y2);
+        const rw = Math.abs(x2 - x1);
+        const rh = Math.abs(y2 - y1);
+
+        // Very tiny drag → ignore
+        if (rw < 4 && rh < 4) {
+          return;
+        }
+
+        selection.clear();
+
+        nodes.forEach(n => {
+          // Simple rule: node center inside the rectangle
+          if (n.x >= rx && n.x <= rx + rw && n.y >= ry && n.y <= ry + rh) {
+            selection.add(n.id);
+          }
+        });
+
+        if (!selection.size) {
+          selectedNodeId = null;
+          renderNodes();
+          setStatus("No nodes in selection");
+          return;
+        }
+
+        if (selection.size === 1) {
+          selectedNodeId = Array.from(selection)[0];
+          const node = nodes.find(n => n.id === selectedNodeId);
+          setStatus(node ? `Selected "${node.label}"` : "Selected 1 node");
+        } else {
+          selectedNodeId = null;
+          setStatus(`Selected ${selection.size} nodes`);
+        }
+
+        renderNodes();
+      }
+
+
 
 
       function confirmDialog(message, title){
@@ -1641,16 +1955,22 @@
         if (!newNode) return false;
 
         const originalColor =
-        (best.link.style && best.link.style.color) || selectedColor();
+        (best.link.style && best.link.style.color) || palette.lineHex || null;
 
         // remove original link
         links = links.filter(l => l !== best.link);
 
-        // add two new links with same color
-        links.push(
-          { from: best.from.id, to: newNode.id, style: { color: originalColor } },
-          { from: newNode.id,   to: best.to.id, style: { color: originalColor } }
-          );
+        // add two new links, only setting style if we actually have a color
+        const link1 = { from: best.from.id, to: newNode.id };
+        const link2 = { from: newNode.id,   to: best.to.id };
+
+        if (originalColor) {
+          link1.style = { color: originalColor };
+          link2.style = { color: originalColor };
+        }
+
+        links.push(link1, link2);
+
         renderLinks();
 
         pushAction({
@@ -1685,22 +2005,88 @@
         return true;
       }
 
+      function getDescendantNodes(rootId){
+        const nodeById = new Map(nodes.map(n => [n.id, n]));
+
+        // Build parent and child adjacency maps
+        const parentsOf  = new Map(); // to -> [from...]
+        const childrenOf = new Map(); // from -> [to...]
+
+        links.forEach(l => {
+          if (!childrenOf.has(l.from)) childrenOf.set(l.from, []);
+          childrenOf.get(l.from).push(l.to);
+
+          if (!parentsOf.has(l.to)) parentsOf.set(l.to, []);
+          parentsOf.get(l.to).push(l.from);
+        });
+
+        // 1) Find all ancestors of rootId (anything "above" it in the graph)
+        const ancestors = new Set([rootId]);
+        const qAnc = [rootId];
+
+        while (qAnc.length){
+          const id = qAnc.shift();
+          const parents = parentsOf.get(id) || [];
+          parents.forEach(pId => {
+            if (!ancestors.has(pId)){
+              ancestors.add(pId);
+              qAnc.push(pId);
+            }
+          });
+        }
+
+        // 2) BFS "downwards" from rootId, following children (from -> to),
+        //    but never stepping into an ancestor node.
+        const result  = [];
+        const visited = new Set([rootId]);
+        const queue   = [rootId];
+
+        while (queue.length){
+          const id = queue.shift();
+          const kids = childrenOf.get(id) || [];
+
+          kids.forEach(childId => {
+            // Skip anything that is an ancestor (including the root itself)
+            if (ancestors.has(childId)) return;
+            if (visited.has(childId))   return;
+
+            visited.add(childId);
+            const childNode = nodeById.get(childId);
+            if (childNode) {
+              result.push(childNode);
+              queue.push(childId);
+            }
+          });
+        }
+
+        return result; // all descendants, no parents
+      }
+
+
 
 
       // reuse splitting logic when dropping an existing node onto a link
       function splitExistingLinkWithNode(node, best){
+
         const original = best.link;
         const originalColor =
-        (original.style && original.style.color) || selectedColor();
+        (original.style && original.style.color) || palette.lineHex || null;
 
         // remove the original link
         links = links.filter(l => l !== original);
 
         // add two new links that pass through this node
-        links.push(
-          { from: best.from.id, to: node.id, style: { color: originalColor } },
-          { from: node.id,      to: best.to.id, style: { color: originalColor } }
-          );
+        const link1 = { from: best.from.id, to: node.id };
+        const link2 = { from: node.id,      to: best.to.id };
+
+        if (originalColor) {
+          link1.style = { color: originalColor };
+          link2.style = { color: originalColor };
+        }
+
+        links.push(link1, link2);
+
+
         renderLinks();
 
         pushAction({
@@ -2188,16 +2574,28 @@ async function listProjects(){
   });
   return out.sort((a,b)=> (b.updatedAt||b.createdAt||0) - (a.updatedAt||a.createdAt||0));
 }
+
+
 async function createProject(name){
   const now = Date.now();
-  const meta = { name, createdAt: now, updatedAt: now, pointer: 0, palette };
+  const meta = {
+    name,
+    createdAt: now,
+    updatedAt: now,
+    pointer: 0,
+    palette: JSON.parse(JSON.stringify(palette))
+  };
   const t = tx(["projects"],"readwrite");
   const req = t.objectStore("projects").add(meta);
-  const id = await new Promise((res,rej)=>{ req.onsuccess=()=>res(req.result); req.onerror=()=>rej(req.error); });
+  const id = await new Promise((res,rej)=>{
+    req.onsuccess = () => res(req.result);
+    req.onerror   = () => rej(req.error);
+  });
   await saveStateSnapshot(id, 0, { nodes:[], links:[], nextId:1 });
   await saveHistoryRecord(id, 1, { type:"INIT", at: now });
   return { id, ...meta };
 }
+
 
 
 
@@ -2393,12 +2791,19 @@ function makeDefaultStyle(){
 
 function addNodeWrapped(x,y){
   const node={id:nextId++,x,y,label:"N"+(nextId-1), style: makeDefaultStyle()};
+
+  // Default text color for newly created nodes, if a text color was chosen
+  if (palette.textHex) {
+    node.style.textColor = palette.textHex;
+  }
+
   nodes.push(node);
   selectedNodeId = node.id;
   renderNodes();
   renderLinks();
   pushAction({type:"ADD_NODE",at:Date.now(),node});
 }
+
 
 function moveNodeWrapped(node){
   renderLinks();
@@ -2422,10 +2827,19 @@ function duplicateNodeWrapped(node, keepLabel=false){
 }
 
 function connectNodesWrapped(aId,bId){
-  links.push({from:aId,to:bId, style:{color:selectedColor()}});
+  const link = { from:aId, to:bId };
+  const color = palette.lineHex || null;
+
+  if (color) {
+    link.style = { color };
+  }
+
+  links.push(link);
   renderLinks();
-  pushAction({type:"CONNECT",at:Date.now(),from:aId,to:bId,color:selectedColor()});
+  pushAction({ type:"CONNECT", at:Date.now(), from:aId, to:bId, color });
 }
+
+
 
 function renameNodeWrapped(node,newLabel){
   const old=node.label;
@@ -2441,6 +2855,31 @@ function restyleNodeWrapped(node, patch){
 }
 
 
+function deleteSelectionWrapped(){
+  if (!selection.size) return;
+
+  const ids = new Set(selection);
+  const count = ids.size;
+
+  nodes = nodes.filter(n => !ids.has(n.id));
+  links = links.filter(l => !ids.has(l.from) && !ids.has(l.to));
+
+  selection.clear();
+  selectedNodeId = null;
+
+  renderAll();
+
+  pushAction({
+    type: "DELETE_SELECTION",
+    at: Date.now(),
+    ids: Array.from(ids)
+  });
+
+  setStatus(`Deleted ${count} selected node${count === 1 ? "" : "s"}`);
+}
+
+
+
 // ----- Rendering -----
 function renderNodes() {
   nodesLayer.innerHTML = "";
@@ -2454,7 +2893,7 @@ function renderNodes() {
       node.style = makeDefaultStyle();
     }
     const style = node.style;
-    const isSelected = node.id === selectedNodeId;
+    const isSelected = (node.id === selectedNodeId) || selection.has(node.id);
 
     let shapeEl;
     if (style.shape === 'pill' || !style.shape) {
@@ -2500,8 +2939,15 @@ function renderNodes() {
     text.setAttribute("text-anchor", "middle");
     text.textContent = node.label;
 
+    const textColor = node.style && node.style.textColor;
+    if (textColor) {
+      text.style.fill = textColor;
+    }
+
+
     g.appendChild(shapeEl);
     g.appendChild(text);
+    
     nodesLayer.appendChild(g);
 
     g.addEventListener("pointerenter", () => {
@@ -2558,7 +3004,12 @@ function renderLinks() {
   setStatus(`Nodes: ${nodes.length} | Links: ${links.length}`);
 }
 
-function renderAll(){ renderNodes(); renderLinks(); }
+
+function renderAll(){ 
+  renderNodes(); 
+  renderLinks();
+}
+
 function updateNodeGraphics(){ renderAll(); }
 
       // ----- Context menu -----
@@ -2679,6 +3130,10 @@ window.addEventListener("keydown", async (e)=>{
         if (mod && k==="y"){ e.preventDefault(); await doRedo(); return; }
 
         if (k === "escape") {
+          if (selection.size || selectedNodeId != null) {
+            clearSelection();
+            return;
+          }
           if (gate.style.display === "flex") {
             gateOff();
             return;
@@ -2693,7 +3148,6 @@ window.addEventListener("keydown", async (e)=>{
           cancelLinking();
           return;
         }
-
 
         // Toggle Lines mode with "l"
         if (!mod && !e.shiftKey && k === "l") {
@@ -2732,7 +3186,16 @@ window.addEventListener("keydown", async (e)=>{
             startConnectionFrom(lastHoverNode, { immediateFollow: true });
           }
         }
-        if (k==="x"){ if (lastHoverNode){ deleteNodeWrapped(lastHoverNode); } }
+
+        if (k === "x") {
+          if (selection.size) {
+            // delete all selected nodes
+            deleteSelectionWrapped();
+          } else if (lastHoverNode) {
+            deleteNodeWrapped(lastHoverNode);
+          }
+        }
+
         if (e.shiftKey && k==="d"){ if (lastHoverNode){ duplicateNodeWrapped(lastHoverNode, true); } }
       });
 
@@ -2805,9 +3268,66 @@ function onNodePointerDown(e, node){
 
 
 
+function startDragFromNode(node, e, withChildren){
+  const p = svgPoint(e);
+
+  dragNode = node;
+  dragOffset.x = node.x - p.x;
+  dragOffset.y = node.y - p.y;
+
+  // If this node is in a multi-selection, drag the whole selection together
+  const hasMultiSelection = selection.size > 1 && selection.has(node.id);
+
+  if (hasMultiSelection && !withChildren) {
+    dragGroup = [];
+    selection.forEach(id => {
+      const n = nodes.find(nn => nn.id === id);
+      if (!n) return;
+      const dx = n.x - p.x;
+      const dy = n.y - p.y;
+      dragGroup.push({ node: n, dx, dy });
+    });
+
+    selectedNodeId = null;      // treat as group, not single
+    updateNodeGraphics();
+    hideInfoTooltip();
+
+    setStatus(`Dragging ${dragGroup.length} selected nodes`);
+    return;
+  }
+
+  // Fallback: your existing "lock children" behavior
+  selectedNodeId = node.id;
+  updateNodeGraphics();
+  hideInfoTooltip();
+
+  if (withChildren) {
+    const descendants = getDescendantNodes(node.id);
+    dragGroup = [];
+
+    // root
+    dragGroup.push({ node, dx: dragOffset.x, dy: dragOffset.y });
+
+    // children
+    descendants.forEach(child => {
+      const dx = child.x - p.x;
+      const dy = child.y - p.y;
+      dragGroup.push({ node: child, dx, dy });
+    });
+
+    const count = descendants.length;
+    setStatus(`Dragging ${node.label} with ${count} child${count === 1 ? "" : "ren"}`);
+  } else {
+    dragGroup = null;
+    setStatus(`Dragging ${node.label}`);
+  }
+}
+
+
+
 
 function onCanvasPointerMove(e){
-  if (pressTimer && dist(e.clientX,e.clientY,downX,downY) > DRAG_MENU_CANCEL_PX) {
+  if (pressTimer && dist(e.clientX, e.clientY, downX, downY) > DRAG_MENU_CANCEL_PX) {
     cancelPressTimer();
   }
 
@@ -2818,31 +3338,31 @@ function onCanvasPointerMove(e){
     return;
   }
 
-        // No active drag yet: turn candidate into real drag if moved enough
+  // No active drag yet: turn candidate into real drag if moved enough
   if (!dragNode && dragCandidate && e.pointerId === dragCandidate.pointerId){
-    const p = svgPoint(e);
-    const node = dragCandidate.node;
-    dragNode = node;
-    dragOffset.x = node.x - p.x;
-    dragOffset.y = node.y - p.y;
+    const withChildren = lockChildrenMode || e.shiftKey;  // mobile: mode; desktop: Shift
+    startDragFromNode(dragCandidate.node, e, withChildren);
     dragCandidate = null;
-
-    selectedNodeId = node.id;
-    updateNodeGraphics();
-
-    hideInfoTooltip();
-
-    setStatus(`Dragging ${node.label}`);
   }
 
   if (!dragNode) return;
 
   const p = svgPoint(e);
-  dragNode.x = p.x + dragOffset.x;
-  dragNode.y = p.y + dragOffset.y;
+
+  // Move either the group (node + children) or just this node
+  if (dragGroup && dragGroup.length){
+    dragGroup.forEach(item => {
+      item.node.x = p.x + item.dx;
+      item.node.y = p.y + item.dy;
+    });
+  } else {
+    dragNode.x = p.x + dragOffset.x;
+    dragNode.y = p.y + dragOffset.y;
+  }
+
   renderAll();
 
-        // while dragging, show dot at the link we would insert into
+  // while dragging, show dot at the link we would insert into
   const best = findNearestLinkPoint(
     dragNode.x,
     dragNode.y,
@@ -2852,6 +3372,7 @@ function onCanvasPointerMove(e){
   else      hideHoverDot();
 }
 
+
 function onCanvasPointerUp(e){
   svg.removeEventListener("pointermove", onCanvasPointerMove);
   cancelPressTimer();
@@ -2860,26 +3381,28 @@ function onCanvasPointerUp(e){
   if (dragNode){
     const movedNode = dragNode;
 
-          // see if this node was dropped onto a link (ignore links it already ends on)
+    // see if this node was dropped onto a link (ignore links it already ends on)
     const best = findNearestLinkPoint(
       movedNode.x,
       movedNode.y,
       { maxDist: 24, ignoreNodeId: movedNode.id }
       );
 
-          // first: finalize movement (records MOVE_NODE in history)
+    // first: finalize movement (records MOVE_NODE in history, including children via snapshot)
     moveNodeWrapped(movedNode);
 
-          // then: if we had a link under us, split it using this node
+    // then: if we had a link under us, split it using this node
     if (best){
       splitExistingLinkWithNode(movedNode, best);
     }
 
     dragNode = null;
+    dragGroup = null;   // clear group drag (node + children)
   }
 
   hideHoverDot();
 }
+
 
 
       // ----- Background: pan or tap-to-add node -----
@@ -2893,6 +3416,23 @@ svg.addEventListener("pointerdown", (e)=>{
         // only act on raw SVG background, not layers/lines
   if (e.target !== svg) return;
 
+  // NEW: in Select mode, start marquee selection instead of tap-to-add
+  if (selectMode && e.button === 0 && currentProject) {
+    e.preventDefault();
+    // Starting a new rectangle clears old selection first
+    clearSelection();
+
+    const p = svgPoint(e);
+    isSelecting = true;
+    selectionStartSvg = { x: p.x, y: p.y };
+    updateSelectionRect(p.x, p.y, p.x, p.y);
+
+    svg.setPointerCapture(e.pointerId);
+    svg.addEventListener("pointermove", onSelectionPointerMove);
+    svg.addEventListener("pointerup", onSelectionPointerUp, { once:true });
+    return;
+  }
+
         // If we are currently doing a two-finger pan, ignore taps
   if (touchPanActive) return;
 
@@ -2903,6 +3443,11 @@ svg.addEventListener("pointerdown", (e)=>{
   }
 
   if (!currentProject){ gateOn(); return; }
+
+  if (selection.size) {
+    clearSelection();
+  }
+
   if (linkingFrom){ cancelLinking(); setStatus("Link cancelled"); return; }
 
         // Start a tap candidate; we will only create the node on pointerup
@@ -3211,40 +3756,40 @@ let pinchStartViewBox = { x: 0, y: 0, w: 0, h: 0 };
         if (dragNode || linkingFrom){ e.preventDefault(); }
       });
 
+
+
       // ----- Palette (anchored color input) -----
       function renderPalette(){
         paletteEl.innerHTML = "";
 
+        // 1) Color swatches
         palette.colors.slice(0,4).forEach((c, i)=>{
           const sw = document.createElement("div");
-          sw.className = "swatch" + (palette.selected===i ? " selected" : "");
+          sw.className = "swatch color" + (palette.selected === i ? " selected" : "");
           sw.style.background = c;
           sw.title = `Color ${i+1}`;
 
-
           sw.addEventListener("click", ()=>{
             palette.selected = i;
-            paletteEl.querySelectorAll(".swatch").forEach((el, idx)=>{
+
+            // update selected outline
+            paletteEl.querySelectorAll(".swatch.color").forEach((el, idx)=>{
               if (!el.classList) return;
               if (idx === i) el.classList.add("selected");
               else el.classList.remove("selected");
             });
+
             updateProjectMeta({ palette });
 
-            const selectedNode = getSelectedNode();
-            if (selectedNode) {
-              restyleNodeWrapped(selectedNode, {
-                fill:   palette.colors[i],
-                stroke: palette.colors[i]
-              });
-            }
-
+            const hex = palette.colors[i];
+            applySelectedColorToTarget(hex);
             positionColorInput();
           });
 
           paletteEl.appendChild(sw);
         });
 
+        // 2) ＋ picker swatch (same behavior, just re-used)
         const pickerBtn = document.createElement("div");
         pickerBtn.className = "swatch picker";
         pickerBtn.title = "Pick a color";
@@ -3254,7 +3799,24 @@ let pinchStartViewBox = { x: 0, y: 0, w: 0, h: 0 };
           colorInput.click();
         });
         paletteEl.appendChild(pickerBtn);
+
+        // 3) NEW: target mode swatch [nodes] [lines] [text] [background]
+        const mode = document.createElement("div");
+        mode.className = "swatch mode";
+        mode.textContent = paletteTargetLabel();
+        mode.title = "What does this color control? Click to cycle: nodes → lines → text → background.";
+        mode.addEventListener("click", cyclePaletteTarget);
+        paletteEl.appendChild(mode);
+
+        // keep the hidden color input aligned to +
+        positionColorInput();
+
+        // re-apply non-graph effects (text / bg) after re-render
+        applyPaletteNonGraphEffects();
       }
+
+
+
 
       function positionColorInput(){
         const plus = paletteEl.querySelector(".swatch.picker");
@@ -3273,29 +3835,27 @@ let pinchStartViewBox = { x: 0, y: 0, w: 0, h: 0 };
         const val = normHex(e.target.value);
         const idx = palette.selected || 0;
         palette.colors[idx] = val;
-        const sw = paletteEl.querySelectorAll(".swatch")[idx];
-        if (sw) sw.style.background = val;
 
-        const selectedNode = getSelectedNode();
-        if (selectedNode) {
-          restyleNodeWrapped(selectedNode, {
-            fill:   val,
-            stroke: val
-          });
-        }
+        const swatches = paletteEl.querySelectorAll(".swatch.color");
+        if (swatches[idx]) swatches[idx].style.background = val;
 
-        setStatus(`Preview color #${idx+1} → ${val}`);
+        // Apply live preview to whichever target is active
+        applySelectedColorToTarget(val);
+        setStatus(`Preview color #${idx+1} → ${val} (${paletteTargetLabel()})`);
       });
-
 
       colorInput.addEventListener("change", async (e)=>{
         const val = normHex(e.target.value);
         const idx = palette.selected || 0;
         palette.colors[idx] = val;
+
         await updateProjectMeta({ palette });
-        renderPalette();
-        setStatus(`Color saved #${idx+1} → ${val}`);
+        renderPalette();   // rebuild swatches + target label
+        setStatus(`Color saved #${idx+1} → ${val} (${paletteTargetLabel()})`);
       });
+
+
+
 
       window.addEventListener("resize", positionColorInput);
 
@@ -3523,7 +4083,14 @@ let pinchStartViewBox = { x: 0, y: 0, w: 0, h: 0 };
         toolBreak.classList.toggle("active",  breakMode);
         toolDelete.classList.toggle("active", deleteMode);
         toolInfo.classList.toggle("active",   infoMode);
+        if (toolLockChildren) {
+          toolLockChildren.classList.toggle("active", lockChildrenMode);
+        }
+        if (toolSelect) {
+          toolSelect.classList.toggle("active", selectMode);
+        }
       }
+
 
       toolInfo.addEventListener("click", () => {
         infoMode = !infoMode;
@@ -3600,6 +4167,42 @@ let pinchStartViewBox = { x: 0, y: 0, w: 0, h: 0 };
         syncToolButtons();
         setStatus(deleteMode ? "Delete mode: tap a node to remove" : "Delete mode off");
       });
+
+      if (toolLockChildren) {
+        toolLockChildren.addEventListener("click", () => {
+          lockChildrenMode = !lockChildrenMode;
+          syncToolButtons();
+          setStatus(
+            lockChildrenMode
+            ? "Lock children: ON (drag moves node and its children)"
+            : "Lock children: OFF"
+            );
+        });
+      }
+
+      if (toolSelect) {
+        toolSelect.addEventListener("click", () => {
+          selectMode = !selectMode;
+          if (selectMode){
+            // Exclusivity: selection mode turns off others
+            linesMode  = false;
+            editMode   = false;
+            breakMode  = false;
+            deleteMode = false;
+            infoMode   = false;
+            chainFrom  = null;
+            hideInfoTooltip();
+          }
+          syncToolButtons();
+          setStatus(
+            selectMode
+            ? "Select mode: drag a rectangle on empty canvas to select nodes"
+            : "Select mode off"
+            );
+        });
+      }
+
+
 
 
       syncToolButtons();
@@ -3764,30 +4367,72 @@ let pinchStartViewBox = { x: 0, y: 0, w: 0, h: 0 };
         await new Promise((res,rej)=>{
           const t = tx(["projects","states","history"],"readwrite");
           t.objectStore("projects").delete(id);
+
           const s = t.objectStore("states").index("by_project").openCursor(IDBKeyRange.only(id));
           s.onsuccess=(e)=>{ const c=e.target.result; if(c){ t.objectStore("states").delete([id,c.value.rev]); c.continue(); } };
+
           const h = t.objectStore("history").index("by_project").openCursor(IDBKeyRange.only(id));
           h.onsuccess=(e)=>{ const c=e.target.result; if(c){ t.objectStore("history").delete([id,c.value.seq]); c.continue(); } };
-          t.oncomplete=()=>res(); t.onerror=()=>rej(t.error);
+
+          t.oncomplete=()=>res();
+          t.onerror=()=>rej(t.error);
         });
-        if (currentProject && currentProject.id===id){ currentProject=null; gateOn(); clearGraph(); setStatus("Project deleted"); }
+
+        // if this was the last-opened project, clear the pointer
+        try{
+          const stored = localStorage.getItem(LAST_PROJECT_KEY);
+          if (stored && Number(stored) === id){
+            localStorage.removeItem(LAST_PROJECT_KEY);
+          }
+        }catch(_){}
+
+        if (currentProject && currentProject.id===id){
+          currentProject=null;
+          gateOn();
+          clearGraph();
+          setStatus("Project deleted");
+        }
       }
 
+      // ----- Projects open -----
       async function openProject(pMeta){
         currentProject = pMeta;
         projLabel.textContent = currentProject.name;
-        palette = (pMeta.palette && Array.isArray(pMeta.palette.colors))
-        ? { colors:[...pMeta.palette.colors], selected: Number(pMeta.palette.selected)||0 }
-        : { colors:['#3b82f6','#22c55e','#f59e0b','#ef4444'], selected:0 };
+
+        // Merge stored palette with defaults to support new fields
+        if (pMeta.palette && Array.isArray(pMeta.palette.colors)) {
+          palette = {
+            ...defaultPalette,
+            ...pMeta.palette,
+            colors: [...pMeta.palette.colors]
+          };
+        } else {
+          palette = JSON.parse(JSON.stringify(defaultPalette));
+        }
+        paletteTarget = palette.target || 'nodes';
+
         renderPalette();
 
         const latest = await loadLatestState(currentProject.id);
         applyState(latest.state);
         await rebuildStacksFromHistory();
+
+        // Apply text/background colors from palette for this project
+        applyPaletteNonGraphEffects();
+
         hasUnsavedChanges = false;
         gateOff();
+
+        try {
+          localStorage.setItem(LAST_PROJECT_KEY, String(currentProject.id));
+        } catch(_) {}
+
+        applyInitialViewForProject(currentProject);
+
         setStatus(`Project opened: ${currentProject.name} | Nodes: ${nodes.length} | Links: ${links.length}`);
       }
+
+
 
 
       btnSwitch.addEventListener("click", async ()=>{ await refreshProjectList(); gateOn(); setStatus("Open project"); });
@@ -4132,6 +4777,8 @@ let pinchStartViewBox = { x: 0, y: 0, w: 0, h: 0 };
 
 
 
+
+
       async function importBackupData(data, mode){
         console.log("[config] importBackupData: start", { mode });
         if (
@@ -4202,7 +4849,7 @@ let pinchStartViewBox = { x: 0, y: 0, w: 0, h: 0 };
           histStore.clear();
         }
 
-          // Write projects, de-duplicating names in merge mode
+    // projects
         importedProjects.forEach(p => {
           const oldId = p.id;
           const newId = mode === "merge" ? (oldId + offset) : oldId;
@@ -4227,7 +4874,7 @@ let pinchStartViewBox = { x: 0, y: 0, w: 0, h: 0 };
           projStore.put(rec);
         });
 
-          // Write states with remapped projectIds
+    // states
         importedStates.forEach(s => {
           const oldPid = s.projectId;
           if (oldPid == null) return;
@@ -4246,7 +4893,7 @@ let pinchStartViewBox = { x: 0, y: 0, w: 0, h: 0 };
           stateStore.put(rec);
         });
 
-          // Write history with remapped projectIds
+    // history
         importedHistory.forEach(h => {
           const oldPid = h.projectId;
           if (oldPid == null) return;
@@ -4279,261 +4926,327 @@ let pinchStartViewBox = { x: 0, y: 0, w: 0, h: 0 };
       await refreshProjectList();
       gateOn();
       clearGraph();
-      setStatus("Import complete");
-      console.log("[config] importBackupData: completed", { mode });
-    }
+  await refreshDbSizeLabel();          // <<< recalc + animate after import
+  setStatus("Import complete");
+  console.log("[config] importBackupData: completed", { mode });
+}
 
+async function refreshDbSizeLabel(){
+  if (!configDbSize) return;
+  configDbSize.textContent = "IndexedDB usage: calculating…";
 
+  try{
+    const bytes = await estimateDBSizeBytes();
+    let human;
+    if (bytes < 1024) human = `${bytes} B`;
+    else if (bytes < 1024*1024) human = `${(bytes/1024).toFixed(1)} KB`;
+    else human = `${(bytes/1024/1024).toFixed(2)} MB`;
 
+    configDbSize.textContent = `IndexedDB usage (approx.): ${human}`;
+    console.log("[config] refreshDbSizeLabel:", { bytes, human });
 
-    if (configImportRun && configImportFile) {
-      configImportRun.addEventListener("click", () => {
-        console.log("[config] Import button clicked");
-        const file = configImportFile.files && configImportFile.files[0];
-        if (!file) {
-          console.log("[config] Import: no file selected, opening picker");
-          configImportFile.click();
-          return;
+    // subtle fade / pop effect
+    if (configDbSize.animate){
+      configDbSize.animate(
+        [
+          { opacity: 0, transform: "scale(0.96)" },
+          { opacity: 1, transform: "scale(1)" }
+        ],
+        {
+          duration: 400,
+          easing: "ease-out"
         }
-        runImportFromFile();
-      });
+        );
+    }
+  }catch(e){
+    configDbSize.textContent = "IndexedDB usage: n/a";
+    console.error("[config] refreshDbSizeLabel: error", e);
 
-      configImportFile.addEventListener("change", () => {
-        const file = configImportFile.files && configImportFile.files[0];
-        if (!file) return;
-        console.log("[config] File chosen via picker, running import");
-        runImportFromFile();
-      });
-
-      async function runImportFromFile() {
-        const file = configImportFile.files && configImportFile.files[0];
-        if (!file) {
-          console.log("[config] runImportFromFile: no file present");
-          return;
+    if (configDbSize.animate){
+      configDbSize.animate(
+        [
+          { opacity: 0, transform: "scale(0.96)" },
+          { opacity: 1, transform: "scale(1)" }
+        ],
+        {
+          duration: 400,
+          easing: "ease-out"
         }
+        );
+    }
+  }
+}
 
-        let mode = "replace";
-        const modeInput = document.querySelector('input[name="import-mode"]:checked');
-        if (modeInput) mode = modeInput.value;
 
-        try {
-          const text = await file.text();
-          const data = JSON.parse(text);
-          await importBackupData(data, mode);
-        } catch (e) {
-          console.error("[config] Import: failed to import backup", e);
-          alert("Failed to import backup.");
-        } finally {
-          configImportFile.value = "";
+
+
+
+if (configImportRun && configImportFile) {
+  configImportRun.addEventListener("click", () => {
+    console.log("[config] Import button clicked");
+    const file = configImportFile.files && configImportFile.files[0];
+    if (!file) {
+      console.log("[config] Import: no file selected, opening picker");
+      configImportFile.click();
+      return;
+    }
+    runImportFromFile();
+  });
+
+  configImportFile.addEventListener("change", () => {
+    const file = configImportFile.files && configImportFile.files[0];
+    if (!file) return;
+    console.log("[config] File chosen via picker, running import");
+    runImportFromFile();
+  });
+
+  async function runImportFromFile() {
+    const file = configImportFile.files && configImportFile.files[0];
+    if (!file) {
+      console.log("[config] runImportFromFile: no file present");
+      return;
+    }
+
+    let mode = "replace";
+    const modeInput = document.querySelector('input[name="import-mode"]:checked');
+    if (modeInput) mode = modeInput.value;
+
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      await importBackupData(data, mode);
+    } catch (e) {
+      console.error("[config] Import: failed to import backup", e);
+      alert("Failed to import backup.");
+    } finally {
+      configImportFile.value = "";
+    }
+  }
+}
+
+if (configDbRefresh) {
+  configDbRefresh.addEventListener("click", () => {
+    console.log("[config] Recalculate size clicked");
+    refreshDbSizeLabel();
+  });
+}
+
+if (configDbClear) {
+  configDbClear.addEventListener("click", () => {
+    console.log("[config] Clear database clicked");
+    clearIndexedDB();
+  });
+}
+
+if (configExportBtn) {
+  configExportBtn.addEventListener("click", () => {
+    console.log("[config] Export data clicked");
+    exportAllData();
+  });
+}
+
+if (configThemeToggle) {
+  configThemeToggle.addEventListener("click", () => {
+    const root = document.documentElement;
+    const current = root.dataset.theme === "light" ? "light" : "dark";
+    const next = current === "light" ? "dark" : "light";
+    console.log("[config] Theme toggle clicked", { current, next });
+    applyTheme(next);
+    try {
+      localStorage.setItem(THEME_KEY, next);
+    } catch (err) {
+      console.warn("[config] Theme toggle: failed to persist theme", err);
+    }
+  });
+}
+
+function clearIndexedDB(){
+  console.log("[config] clearIndexedDB: start");
+  const ok = confirm("Clear all Node Canvas data from this browser? This cannot be undone.");
+  if (!ok) {
+    console.log("[config] clearIndexedDB: user cancelled");
+    return;
+  }
+  if (db){
+    db.close();
+    db = null;
+  }
+  const req = indexedDB.deleteDatabase(DB_NAME);
+  req.onsuccess = () => {
+    setStatus("Database cleared");
+    console.log("[config] clearIndexedDB: success, reloading");
+    location.reload();
+  };
+  req.onerror = () => {
+    setStatus("Failed to clear database");
+    console.error("[config] clearIndexedDB: error", req.error);
+  };
+  req.onblocked = () => {
+    setStatus("Database clear blocked by another tab");
+    console.warn("[config] clearIndexedDB: blocked");
+  };
+}
+
+async function estimateDBSizeBytes(){
+  console.log("[config] estimateDBSizeBytes: start");
+  if (!db) {
+    console.log("[config] estimateDBSizeBytes: no db");
+    return 0;
+  }
+  const stores = ["projects","states","history"];
+  let total = 0;
+  for (const store of stores){
+    await new Promise((res, rej) => {
+      const t = tx([store]);
+      const s = t.objectStore(store);
+      const req = s.openCursor();
+      req.onsuccess = (e) => {
+        const cur = e.target.result;
+        if (cur){
+          try {
+            total += JSON.stringify(cur.value).length;
+          } catch(_) {}
+          cur.continue();
+        } else {
+          res();
         }
-      }
-    }
-
-    if (configDbRefresh) {
-      configDbRefresh.addEventListener("click", () => {
-        console.log("[config] Recalculate size clicked");
-        refreshDbSizeLabel();
-      });
-    }
-
-    if (configDbClear) {
-      configDbClear.addEventListener("click", () => {
-        console.log("[config] Clear database clicked");
-        clearIndexedDB();
-      });
-    }
-
-    if (configExportBtn) {
-      configExportBtn.addEventListener("click", () => {
-        console.log("[config] Export data clicked");
-        exportAllData();
-      });
-    }
-
-    if (configThemeToggle) {
-      configThemeToggle.addEventListener("click", () => {
-        const root = document.documentElement;
-        const current = root.dataset.theme === "light" ? "light" : "dark";
-        const next = current === "light" ? "dark" : "light";
-        console.log("[config] Theme toggle clicked", { current, next });
-        applyTheme(next);
-        try {
-          localStorage.setItem(THEME_KEY, next);
-        } catch (err) {
-          console.warn("[config] Theme toggle: failed to persist theme", err);
-        }
-      });
-    }
-
-    function clearIndexedDB(){
-      console.log("[config] clearIndexedDB: start");
-      const ok = confirm("Clear all Node Canvas data from this browser? This cannot be undone.");
-      if (!ok) {
-        console.log("[config] clearIndexedDB: user cancelled");
-        return;
-      }
-      if (db){
-        db.close();
-        db = null;
-      }
-      const req = indexedDB.deleteDatabase(DB_NAME);
-      req.onsuccess = () => {
-        setStatus("Database cleared");
-        console.log("[config] clearIndexedDB: success, reloading");
-        location.reload();
       };
-      req.onerror = () => {
-        setStatus("Failed to clear database");
-        console.error("[config] clearIndexedDB: error", req.error);
-      };
-      req.onblocked = () => {
-        setStatus("Database clear blocked by another tab");
-        console.warn("[config] clearIndexedDB: blocked");
-      };
-    }
+      req.onerror = () => rej(req.error);
+    });
+  }
+  console.log("[config] estimateDBSizeBytes: done", { bytes: total });
+  return total;
+}
 
-    async function estimateDBSizeBytes(){
-      console.log("[config] estimateDBSizeBytes: start");
-      if (!db) {
-        console.log("[config] estimateDBSizeBytes: no db");
-        return 0;
-      }
-      const stores = ["projects","states","history"];
-      let total = 0;
-      for (const store of stores){
-        await new Promise((res, rej) => {
-          const t = tx([store]);
-          const s = t.objectStore(store);
-          const req = s.openCursor();
-          req.onsuccess = (e) => {
-            const cur = e.target.result;
-            if (cur){
-              try {
-                total += JSON.stringify(cur.value).length;
-              } catch(_) {}
-              cur.continue();
-            } else {
-              res();
-            }
-          };
-          req.onerror = () => rej(req.error);
-        });
-      }
-      console.log("[config] estimateDBSizeBytes: done", { bytes: total });
-      return total;
-    }
+async function refreshDbSizeLabel(){
+  if (!configDbSize) return;
+  configDbSize.textContent = "IndexedDB usage: calculating…";
+  try{
+    const bytes = await estimateDBSizeBytes();
+    let human;
+    if (bytes < 1024) human = `${bytes} B`;
+    else if (bytes < 1024*1024) human = `${(bytes/1024).toFixed(1)} KB`;
+    else human = `${(bytes/1024/1024).toFixed(2)} MB`;
+    configDbSize.textContent = `IndexedDB usage (approx.): ${human}`;
+    console.log("[config] refreshDbSizeLabel:", { bytes, human });
+  }catch(e){
+    configDbSize.textContent = "IndexedDB usage: n/a";
+    console.error("[config] refreshDbSizeLabel: error", e);
+  }
+}
 
-    async function refreshDbSizeLabel(){
-      if (!configDbSize) return;
-      configDbSize.textContent = "IndexedDB usage: calculating…";
-      try{
-        const bytes = await estimateDBSizeBytes();
-        let human;
-        if (bytes < 1024) human = `${bytes} B`;
-        else if (bytes < 1024*1024) human = `${(bytes/1024).toFixed(1)} KB`;
-        else human = `${(bytes/1024/1024).toFixed(2)} MB`;
-        configDbSize.textContent = `IndexedDB usage (approx.): ${human}`;
-        console.log("[config] refreshDbSizeLabel:", { bytes, human });
-      }catch(e){
-        configDbSize.textContent = "IndexedDB usage: n/a";
-        console.error("[config] refreshDbSizeLabel: error", e);
-      }
-    }
+function showConfigOverlay(){
+  if (!configOverlay) {
+    console.warn("[config] showConfigOverlay: overlay missing");
+    return;
+  }
+  console.log("[config] showConfigOverlay");
+  configOverlay.style.display = "flex";
+  refreshDbSizeLabel();
+}
 
-    function showConfigOverlay(){
-      if (!configOverlay) {
-        console.warn("[config] showConfigOverlay: overlay missing");
-        return;
-      }
-      console.log("[config] showConfigOverlay");
-      configOverlay.style.display = "flex";
-      refreshDbSizeLabel();
-    }
+function hideConfigOverlay(){
+  if (!configOverlay) return;
+  console.log("[config] hideConfigOverlay");
+  configOverlay.style.display = "none";
+}
 
-    function hideConfigOverlay(){
-      if (!configOverlay) return;
-      console.log("[config] hideConfigOverlay");
-      configOverlay.style.display = "none";
-    }
+function applyTheme(theme){
+  const root = document.documentElement;
+  root.dataset.theme = theme;
+  if (configThemeToggle){
+    configThemeToggle.textContent = theme === "light" ? "Theme: Light" : "Theme: Dark";
+  }
+  console.log("[config] applyTheme", { theme });
+}
 
-    function applyTheme(theme){
-      const root = document.documentElement;
-      root.dataset.theme = theme;
-      if (configThemeToggle){
-        configThemeToggle.textContent = theme === "light" ? "Theme: Light" : "Theme: Dark";
-      }
-      console.log("[config] applyTheme", { theme });
-    }
+function initTheme(){
+  let theme;
+  try {
+    theme = localStorage.getItem(THEME_KEY);
+  } catch (err) {
+    console.warn("[config] initTheme: failed to read localStorage", err);
+  }
+  if (theme !== "light" && theme !== "dark") theme = "dark";
+  console.log("[config] initTheme", { theme });
+  applyTheme(theme);
+}
 
-    function initTheme(){
-      let theme;
-      try {
-        theme = localStorage.getItem(THEME_KEY);
-      } catch (err) {
-        console.warn("[config] initTheme: failed to read localStorage", err);
-      }
-      if (theme !== "light" && theme !== "dark") theme = "dark";
-      console.log("[config] initTheme", { theme });
-      applyTheme(theme);
-    }
 
-    async function boot(){
-      console.log("[boot] start");
-      svg.style.touchAction = "none";
 
-      initTheme();
 
-      db = await openDB();
-      console.log("[boot] db opened");
+     // ----- Boot -----
+async function boot(){
+  console.log("[boot] start");
+  svg.style.touchAction = "none";
+  initTheme();
 
-      await refreshProjectList();
-      gateOn();
-      clearGraph();
-      renderPalette();
+  db = await openDB();
+  console.log("[boot] db opened");
 
-      initViewBox();
-      updateZoomLabel();
+  await refreshProjectList();
 
-      requestAnimationFrame(positionColorInput);
-      setStatus("Mode: create/open a project");
-
-      window.addEventListener("resize", () => {
-        const rect = svg.getBoundingClientRect();
-        if (!rect.width || !rect.height) {
-          positionColorInput();
-          return;
+  let autoOpened = false;
+  try{
+    const stored = localStorage.getItem(LAST_PROJECT_KEY);
+    if (stored){
+      const lastId = Number(stored);
+      if (!Number.isNaN(lastId)){
+        const list = projectListItems && projectListItems.length
+        ? projectListItems
+        : await listProjects();
+        const last = list.find(p => p.id === lastId);
+        if (last){
+          await openProject(last);
+          autoOpened = true;
+          console.log("[boot] auto-opened last project", last);
         }
+      }
+    }
+  }catch(err){
+    console.warn("[boot] failed to restore last project", err);
+  }
 
-          // keep current world center
-        const cx = viewBox.x + viewBox.w / 2;
-        const cy = viewBox.y + viewBox.h / 2;
+  if (!autoOpened){
+    gateOn();
+    clearGraph();
+    renderPalette();
+    applyInitialViewForProject({ view: null });
+    setStatus("Mode: create/open a project");
+  }
 
-          // update "base" size used for zoom=1
-        baseViewBox.w = rect.width;
-        baseViewBox.h = rect.height;
+  positionColorInput();
 
-          // recompute viewBox size from current zoom
-          // zoom is defined as baseViewBox.w / viewBox.w
-        viewBox.w = baseViewBox.w / zoom;
-        viewBox.h = baseViewBox.h / zoom;
-
-          // keep same center in world coordinates
-        viewBox.x = cx - viewBox.w / 2;
-        viewBox.y = cy - viewBox.h / 2;
-
-        updateViewBox();
-        updateZoomLabel();
-        positionColorInput();
-      });
-
-
-      console.log("[boot] complete");
+  window.addEventListener("resize", () => {
+    const rect = svg.getBoundingClientRect();
+    if (!rect.width || !rect.height) {
+      positionColorInput();
+      return;
     }
 
-    boot();
+    const cx = viewBox.x + viewBox.w / 2;
+    const cy = viewBox.y + viewBox.h / 2;
+
+    baseViewBox.w = rect.width;
+    baseViewBox.h = rect.height;
+
+    viewBox.w = baseViewBox.w / zoom;
+    viewBox.h = baseViewBox.h / zoom;
+    viewBox.x = cx - viewBox.w / 2;
+    viewBox.y = cy - viewBox.h / 2;
+
+    updateViewBox();
+    updateZoomLabel();
+    positionColorInput();
+  });
+
+  console.log("[boot] complete");
+}
+
+boot();
 
 
-  })();
+})();
 
 
 </script>
